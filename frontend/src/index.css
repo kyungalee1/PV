@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply text-toss-gray-900 antialiased;
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(160deg, #e8f0fe 0%, #f2f4f6 35%, #eef4ff 70%, #f9fafb 100%);
+  background-attachment: fixed;
+}
+
+#root {
+  min-height: 100vh;
+}

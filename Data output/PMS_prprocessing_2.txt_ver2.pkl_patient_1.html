@@ -1,0 +1,443 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+ <head>
+  <meta content="text/html; charset=utf-8" http-equiv="Content-Type"/>
+  <meta content="PhpSpreadsheet, https://github.com/PHPOffice/PhpSpreadsheet" name="generator"/>
+  <meta content="11234" name="author"/>
+  <style type="text/css">
+   html { font-family:Calibri, Arial, Helvetica, sans-serif; font-size:11pt; background-color:white }
+      a.comment-indicator:hover + div.comment { background:#ffd; position:absolute; display:block; border:1px solid black; padding:0.5em }
+      a.comment-indicator { background:red; display:inline-block; border:1px solid black; width:0.5em; height:0.5em }
+      div.comment { display:none }
+      table { border-collapse:collapse; page-break-after:always }
+      .gridlines td { border:1px dotted black }
+      .gridlines th { border:1px dotted black }
+      .b { text-align:center }
+      .e { text-align:center }
+      .f { text-align:right }
+      .inlineStr { text-align:left }
+      .n { text-align:right }
+      .s { text-align:left }
+      td.style0 { vertical-align:middle; border-bottom:none #000000; border-top:none #000000; border-left:none #000000; border-right:none #000000; color:#000000; font-family:'맑은 고딕'; font-size:12pt; background-color:white }
+      th.style0 { vertical-align:middle; border-bottom:none #000000; border-top:none #000000; border-left:none #000000; border-right:none #000000; color:#000000; font-family:'맑은 고딕'; font-size:12pt; background-color:white }
+      td.style1 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; font-weight:bold; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      th.style1 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; font-weight:bold; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      td.style2 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#4472C4; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      th.style2 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#4472C4; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      td.style3 { vertical-align:middle; text-align:right; padding-right:0px; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#4472C4; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      th.style3 { vertical-align:middle; text-align:right; padding-right:0px; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#4472C4; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      td.style4 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#4472C4; font-family:'Times New Roman'; font-size:9pt; background-color:#FFFFFF }
+      th.style4 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#4472C4; font-family:'Times New Roman'; font-size:9pt; background-color:#FFFFFF }
+      td.style5 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#4A86E8; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      th.style5 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#4A86E8; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      td.style6 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; font-weight:bold; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      th.style6 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; font-weight:bold; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      td.style7 { vertical-align:middle; text-align:center; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#4472C4; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      th.style7 { vertical-align:middle; text-align:center; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#4472C4; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      td.style8 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#4472C4; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      th.style8 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#4472C4; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      td.style9 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; font-weight:bold; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      th.style9 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; font-weight:bold; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      td.style10 { vertical-align:bottom; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#000000; font-family:'Arial'; font-size:10pt; background-color:white }
+      th.style10 { vertical-align:bottom; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#000000; font-family:'Arial'; font-size:10pt; background-color:white }
+      td.style11 { vertical-align:bottom; text-align:left; padding-left:0px; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; font-weight:bold; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:#FFFFFF }
+      th.style11 { vertical-align:bottom; text-align:left; padding-left:0px; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; font-weight:bold; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:#FFFFFF }
+      td.style12 { vertical-align:middle; text-align:center; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      th.style12 { vertical-align:middle; text-align:center; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      td.style13 { vertical-align:bottom; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#000000; font-family:'맑은 고딕'; font-size:12pt; background-color:white }
+      th.style13 { vertical-align:bottom; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#000000; font-family:'맑은 고딕'; font-size:12pt; background-color:white }
+      td.style14 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#4472C4; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      th.style14 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#4472C4; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      td.style15 { vertical-align:middle; text-align:center; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; font-weight:bold; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      th.style15 { vertical-align:middle; text-align:center; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; font-weight:bold; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      td.style16 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#4472C4; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      th.style16 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#4472C4; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      td.style17 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      th.style17 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      td.style18 { vertical-align:middle; text-align:center; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#4472C4; font-family:'Times New Roman'; font-size:20pt; background-color:white }
+      th.style18 { vertical-align:middle; text-align:center; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#4472C4; font-family:'Times New Roman'; font-size:20pt; background-color:white }
+      td.style19 { vertical-align:middle; text-align:center; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; font-weight:bold; color:#000000; font-family:'Times New Roman'; font-size:12pt; background-color:white }
+      th.style19 { vertical-align:middle; text-align:center; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; font-weight:bold; color:#000000; font-family:'Times New Roman'; font-size:12pt; background-color:white }
+      td.style20 { vertical-align:middle; text-align:center; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      th.style20 { vertical-align:middle; text-align:center; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      td.style21 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      th.style21 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      td.style22 { vertical-align:middle; text-align:center; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; font-weight:bold; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      th.style22 { vertical-align:middle; text-align:center; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; font-weight:bold; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      td.style23 { vertical-align:middle; text-align:left; padding-left:0px; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; font-weight:bold; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      th.style23 { vertical-align:middle; text-align:left; padding-left:0px; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; font-weight:bold; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      td.style24 { vertical-align:middle; text-align:center; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#4472C4; font-family:'Segoe UI Symbol'; font-size:20pt; background-color:white }
+      th.style24 { vertical-align:middle; text-align:center; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; color:#4472C4; font-family:'Segoe UI Symbol'; font-size:20pt; background-color:white }
+      td.style25 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; font-weight:bold; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      th.style25 { vertical-align:middle; border-bottom:1px solid #000000 !important; border-top:1px solid #000000 !important; border-left:1px solid #000000 !important; border-right:1px solid #000000 !important; font-weight:bold; color:#000000; font-family:'Times New Roman'; font-size:10pt; background-color:white }
+      table.sheet0 col.col0 { width:42pt }
+      table.sheet0 col.col1 { width:42pt }
+      table.sheet0 col.col2 { width:42pt }
+      table.sheet0 col.col3 { width:42pt }
+      table.sheet0 col.col4 { width:42pt }
+      table.sheet0 col.col5 { width:42pt }
+      table.sheet0 col.col6 { width:42pt }
+      table.sheet0 col.col7 { width:268.39999692pt }
+      table.sheet0 tr { height:16.363636363636pt }
+  </style>
+ </head>
+ <body>
+  <style>
+   @page { margin-left: 0.7in; margin-right: 0.7in; margin-top: 0.75in; margin-bottom: 0.75in; }
+body { margin-left: 0.7in; margin-right: 0.7in; margin-top: 0.75in; margin-bottom: 0.75in; }
+  </style>
+  <table border="0" cellpadding="0" cellspacing="0" class="sheet0 gridlines" id="sheet0">
+   <col class="col0"/>
+   <col class="col1"/>
+   <col class="col2"/>
+   <col class="col3"/>
+   <col class="col4"/>
+   <col class="col5"/>
+   <col class="col6"/>
+   <col class="col7"/>
+   <tbody>
+    <tr class="row0">
+     <td class="column0 style19 s style10" colspan="4" rowspan="3">
+      SUSPECT ADVERSE REACTION REPORT
+     </td>
+     <td class="column4 style20 null style10" colspan="4">
+     </td>
+    </tr>
+    <tr class="row1">
+     <td class="column4 style20 null style10" colspan="4">
+     </td>
+    </tr>
+    <tr class="row2">
+     <td class="column4 style21 null style10" colspan="4">
+     </td>
+    </tr>
+    <tr class="row3">
+     <td class="column0 style22 s style10" colspan="8">
+      1. REACTION INFORMATION
+     </td>
+    </tr>
+    <tr class="row4">
+     <td class="column0 style1 s">
+      1. PATIENT INITIALS (first, last)
+     </td>
+     <td class="column1 style1 s">
+      1a. COUNTRY
+     </td>
+     <td class="column2 style1 s">
+      2. DATE OF BIRTH
+     </td>
+     <td class="column3 style1 s">
+      2a. AGE YRS
+     </td>
+     <td class="column4 style1 s">
+      3. SEX
+     </td>
+     <td class="column5 style1 s">
+      4-6 REACTION ONSET
+     </td>
+     <td class="column6 style23 s style10" colspan="2" rowspan="2">
+      8-12 CHECK ALL
+      <br/>
+      APPROPRIATE TO ADVERSE REACTION
+     </td>
+    </tr>
+    <tr class="row5">
+     <td class="column0 style2 s" data-name="patient_initials">
+      11-0117
+     </td>
+     <td class="column1 style2 s" data-name="patient_country">
+      unk
+     </td>
+     <td class="column2 style3 s" data-name="patient_dateOfBirth">
+      2022-04-09
+     </td>
+     <td class="column3 style3 s" data-name="patient_age">
+      1
+     </td>
+     <td class="column4 style4 s" data-name="patient_sex">
+      male
+     </td>
+     <td class="column5 style5 s" data-name="patient_reactionOnset">
+      Otitis media NOS : 2023-04-12 00:00
+     </td>
+    </tr>
+    <tr class="row6">
+     <td class="column0 style9 s style10" colspan="6">
+      7 + 13 DESCRIBE REACTION(S) (including relevant tests/lab data)
+     </td>
+     <td class="column6 style18 s style13" data-name="serious_1" rowspan="2">
+      □
+     </td>
+     <td class="column7 style17 s style10" rowspan="2">
+      PATIENT DIED
+     </td>
+    </tr>
+    <tr class="row7">
+     <td class="column0 style16 s style10" colspan="6" data-name="patient_description" rowspan="6">
+      - Patient Information: The patient is a 1-year-old male, born on 2022-04-09, weighing 10.6kg, with a patient ID of 11-0117. He visited B Pediatric Clinic once as an outpatient and has not been vaccinated with the varicella vaccine before. He has a history of otitis media (Otitis media NOS), diagnosed on 2023-04-12, and the condition is ongoing.
+      <br/>
+      - Suspected Drug Information: {suspected drug 1: Greenflu-S, dose: 0.5mL^2, reason for use: prevention of varicella, date of administration: 2023-04-12}
+      <br/>
+      - Adverse Event: ['Otitis media NOS'] is a list of adverse reactions. The patient was diagnosed with otitis media (Otitis media NOS) on 2023-04-12, and the condition is ongoing.
+      <br/>
+      - Treatment Process: The patient was treated with Yucla duo dry syrup 500mL orally from 2023-04-12 to 2023-04-17 for otitis media NOS, containing Amoxicillin trihydrate/Clavulanate potassium. Other medications for otitis media NOS included Prd suspension syrup 0.3%, Nottemon patch 0.5mg 1.6X1.6㎠, Hebron syrup, and Comy syrup 500mL, with various administration routes and dosages.
+      <br/>
+      - Final outcome for the patient: NA
+      <br/>
+      - Report and Overall Opinion: NA
+     </td>
+    </tr>
+    <tr class="row8">
+     <td class="column6 style18 s style18" data-name="serious_2">
+      □
+     </td>
+     <td class="column7 style17 s style17">
+      LIFE THREATENING
+     </td>
+    </tr>
+    <tr class="row10">
+     <td class="column6 style18 s style18" data-name="serious_3">
+      □
+     </td>
+     <td class="column7 style17 s style17">
+      INVOLVED OR PROLONGED
+      <br/>
+      INPATIENT HOSPITALIZATION
+     </td>
+    </tr>
+    <tr class="row12">
+     <td class="column6 style18 s style18" data-name="serious_4">
+      □
+     </td>
+     <td class="column7 style17 s style17">
+      RESULTS IN PERSISTENT OR
+      <br/>
+      SIGNIFICIANT DISABILITY INCAPACITY
+     </td>
+    </tr>
+    <tr class="row14">
+     <td class="column6 style18 s style18" data-name="serious_5">
+      □
+     </td>
+     <td class="column7 style17 s style17">
+      CONGENTIAL ANOMALY
+     </td>
+    </tr>
+    <tr class="row16">
+     <td class="column6 style18 s style18" data-name="serious_6">
+      □
+     </td>
+     <td class="column7 style17 s style17">
+      OTHER MEDICALLY
+      <br/>
+      IMPORTANT CONDITION
+     </td>
+    </tr>
+    <tr class="row18">
+     <td class="column0 style15 s style10" colspan="8">
+      Il. SUSPECT DRUG(S) INFORMATION
+     </td>
+    </tr>
+    <tr class="row19">
+     <td class="column0 style9 s style10" colspan="6">
+      14. SUSPECT DRUG(S) (include generic name)
+     </td>
+     <td class="column6 style15 n style10" rowspan="4">
+      20
+     </td>
+     <td class="column7 style9 s style10" rowspan="3">
+      DID REACTION
+      <br/>
+      ABATE AFTER
+      <br/>
+      STOPPING DRUG?
+     </td>
+    </tr>
+    <tr class="row20">
+     <td class="column0 style14 s style10" colspan="6" data-name="suspect_drug">
+      Greenflu-S, Amoxicillin trihydrate/Clavulanate potassium
+     </td>
+    </tr>
+    <tr class="row21">
+     <td class="column0 style9 s style10" colspan="3">
+      15. DAILY DOSE(S)
+     </td>
+     <td class="column3 style9 s style10" colspan="3">
+      16. ROUTE(S) OF ADMINISTRATION
+     </td>
+    </tr>
+    <tr class="row22">
+     <td class="column0 style14 s style10" colspan="3" data-name="daily_dose">
+      Greenflu-S: ['0.5mL^2']
+      <br/>
+      Amoxicillin trihydrate/Clavulanate potassium: ['unk']
+     </td>
+     <td class="column3 style14 s style10" colspan="3" data-name="route_of_administration">
+      Greenflu-S: vaccination
+      <br/>
+      Amoxicillin trihydrate/Clavulanate potassium: oral
+     </td>
+     <td class="column7 style7 s" data-name="reactionAbatedAfterStopping">
+      Greenflu-S: □ YES □ NO ☑ NA
+      <br/>
+      Amoxicillin trihydrate/Clavulanate potassium: □ YES □ NO ☑ NA
+     </td>
+    </tr>
+    <tr class="row23">
+     <td class="column0 style9 s style10" colspan="6">
+      17. INDICATION(S) FOR USE
+     </td>
+     <td class="column6 style15 n style10" rowspan="4">
+      21
+     </td>
+     <td class="column7 style9 s style10" rowspan="3">
+      DID REACTION
+      <br/>
+      REAPPEAR AFTER
+      <br/>
+      REINTRODUCTION
+     </td>
+    </tr>
+    <tr class="row24">
+     <td class="column0 style14 s style10" colspan="6" data-name="indication">
+      Greenflu-S: varicella
+      <br/>
+      Amoxicillin trihydrate/Clavulanate potassium: Otitis media NOS
+     </td>
+    </tr>
+    <tr class="row25">
+     <td class="column0 style9 s style10" colspan="3">
+      18. THERAPY DATES (from/to)
+     </td>
+     <td class="column3 style9 s style10" colspan="3">
+      19. THERAPY DURATION
+     </td>
+    </tr>
+    <tr class="row26">
+     <td class="column0 style14 s style10" colspan="3" data-name="theraphy_date">
+      Greenflu-S: 2023-04-12 00:00 ~ NA
+      <br/>
+      Amoxicillin trihydrate/Clavulanate potassium: 2023-04-12 00:00 ~ 2023-04-17 00:00
+     </td>
+     <td class="column3 style14 s style10" colspan="3" data-name="theraphy_duration">
+      Greenflu-S: unk
+      <br/>
+      Amoxicillin trihydrate/Clavulanate potassium: 5 days
+     </td>
+     <td class="column7 style7 s" data-name="reactionReappearedAfterReintroduction">
+      Greenflu-S: □ YES □ NO ☑ NA
+      <br/>
+      Amoxicillin trihydrate/Clavulanate potassium: □ YES □ NO ☑ NA
+     </td>
+    </tr>
+    <tr class="row27">
+     <td class="column0 style15 s style10" colspan="8">
+      Ill. CONCOMITANT DRUG(S) AND HISTORY
+     </td>
+    </tr>
+    <tr class="row28">
+     <td class="column0 style9 s style10" colspan="8">
+      22. CONCOMTANT DRUGS AND DATES OF ADMINISTRATION (Exclude those used to treat event)
+     </td>
+    </tr>
+    <tr class="row29">
+     <td class="column0 style16 s style10" colspan="8" data-name="concom_info">
+      Prd suspension syrup 0.3% (Dosage : ['unk'], Date  of Administration : unk)
+      <br/>
+      Nottemon patch 0.5mg 1.6X1.6㎠ (Dosage : ['unk'], Date  of Administration : unk)
+      <br/>
+      Hebron syrup (Dosage : ['unk'], Date  of Administration : unk)
+      <br/>
+      Comy syrup 500mL (Dosage : ['unk'], Date  of Administration : unk)
+     </td>
+    </tr>
+    <tr class="row31">
+     <td class="column0 style9 s style10" colspan="8">
+      23. OTHER RELEVANT HISTORY
+     </td>
+    </tr>
+    <tr class="row32">
+     <td class="column0 style17 s style10" colspan="8">
+      Concurrent Disease:
+     </td>
+    </tr>
+    <tr class="row33">
+     <td class="column0 style14 s style10" colspan="8" data-name="other_relevent_history">
+      The patient has a past medical history of otitis media since 2023-04-12, which is ongoing. There is no family history information available. The patient was treated with Greenflu-S for varicella and Yucla duo dry syrup for otitis media from 2023-04-12 to 2023-04-17. Additionally, the patient received treatment with Prd suspension syrup, Nottemon patch, Hebron syrup, and Comy syrup for otitis media.
+     </td>
+    </tr>
+    <tr class="row34">
+     <td class="column0 style15 s style10" colspan="8">
+      IV. MANUFACTURER INFORMATION
+     </td>
+    </tr>
+    <tr class="row35">
+     <td class="column0 style9 s style10" colspan="4">
+      24a. NAME AND ADDRESS OF MANUFACTURER
+     </td>
+     <td class="column4 style9 s style10" colspan="4">
+      26. REMARKS
+     </td>
+    </tr>
+    <tr class="row36">
+     <td class="column0 style16 s style10" colspan="4">
+     </td>
+     <td class="column4 style14 s style10" colspan="4" rowspan="3">
+     </td>
+    </tr>
+    <tr class="row37">
+     <td class="column0 style17 null style10" rowspan="2">
+     </td>
+     <td class="column1 style9 s style10" colspan="3">
+      24b. MFR CONTROL NO.
+     </td>
+    </tr>
+    <tr class="row38">
+     <td class="column1 style14 s style10" colspan="3" data-name="mfr_control_no">
+      unk
+     </td>
+    </tr>
+    <tr class="row39">
+     <td class="column0 style25 s style10" rowspan="2">
+      24c. DATE RECEIVED BY
+      <br/>
+      MANUFACTURER
+     </td>
+     <td class="column1 style9 s style10" colspan="3">
+      24d. REPORT SOURCE
+     </td>
+     <td class="column4 style11 s style10" colspan="4">
+      25b. NAME AND ADDRESS OF REPORTER
+     </td>
+    </tr>
+    <tr class="row40">
+     <td class="column1 style12 s style10" colspan="3" data-name="report_source" rowspan="2">
+      □ STUDY □ LITERATURE □ AUTHORITY □ HEALTH PROFESSIONAL ☑ OTHER
+     </td>
+     <td class="column4 style14 s style10" colspan="4" rowspan="4">
+     </td>
+    </tr>
+    <tr class="row41">
+     <td class="column0 style8 s">
+     </td>
+    </tr>
+    <tr class="row42">
+     <td class="column0 style6 s">
+      DATE OF THIS REPORT
+     </td>
+     <td class="column1 style9 s style10" colspan="3">
+      25a. REPORT TYPE
+     </td>
+    </tr>
+    <tr class="row43">
+     <td class="column0 style8 s" data-name="date_of_this_report">
+      2023-09-01
+     </td>
+     <td class="column1 style12 s style10" colspan="3" data-name="report_type">
+      ☑ INITIAL □ FOLLOWUP □ FINAL
+     </td>
+    </tr>
+   </tbody>
+  </table>
+ </body>
+</html>

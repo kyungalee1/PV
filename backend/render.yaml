@@ -1,0 +1,15 @@
+# Render.com 배포용 (무료 티어 가능)
+# https://render.com → New → Blueprint 또는 Web Service
+services:
+  - type: web
+    name: cioms-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: CORS_ORIGINS
+        sync: false
+      - key: PYTHON_VERSION
+        value: "3.12"
