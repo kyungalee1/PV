@@ -40,6 +40,7 @@ class CiomsFormData(BaseModel):
     reaction_meddra_pt: str = ""
     reaction_verbatim: str = ""
     reaction_onset_date: str = ""
+    reaction_onset_display: str = ""
     reaction_end_date: str = ""
     reaction_outcome: str = ""
     seriousness_death: bool = False

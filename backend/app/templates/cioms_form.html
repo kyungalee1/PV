@@ -7,7 +7,7 @@
     @page { size: A4 portrait; margin: 0.6in; }
     body { font-family: "Times New Roman", Times, serif; font-size: 10pt; margin: 0.6in; color: #000; }
     table { border-collapse: collapse; width: 100%; table-layout: fixed; }
-    td { border: 1px solid #000; vertical-align: middle; padding: 2px 4px; overflow: hidden; }
+    td { border: 1px solid #000; vertical-align: middle; padding: 2px 4px; }
     .lbl { font-weight: bold; font-size: 9pt; background: #fff; }
     .val { color: #4472C4; font-size: 10pt; word-wrap: break-word; overflow-wrap: break-word; }
     .val-lg {
@@ -17,9 +17,17 @@
       word-wrap: break-word;
       overflow-wrap: anywhere;
       word-break: break-word;
-      max-width: 0;
       vertical-align: top;
       line-height: 1.4;
+      overflow: visible;
+    }
+    /* Narrow cells beside checkbox column — force wrap in fixed table */
+    .val-lg.narrow-cell {
+      max-width: 0;
+    }
+    .val-lg.full-cell {
+      width: 100%;
+      max-width: none;
     }
     .narrative-cell {
       min-height: 120px;
@@ -29,11 +37,20 @@
     .section { font-weight: bold; text-align: center; background: #fff; }
     .cb { text-align: center; font-size: 14pt; color: #4472C4; width: 28px; }
     .cb-lbl { font-size: 9pt; }
-    .yn { text-align: center; font-size: 9pt; }
+    .yn { font-size: 8pt; line-height: 1.45; vertical-align: top; padding: 4px 6px; }
+    .yn .opt { display: block; margin: 2px 0; white-space: normal; word-wrap: break-word; }
+    .yn-inline .opt { display: block; margin: 2px 0; white-space: normal; }
+    .lbl-iv { font-weight: bold; font-size: 8pt; line-height: 1.4; vertical-align: top; padding: 5px 6px; min-height: 2.6em; }
+    .val-date { color: #4472C4; font-size: 10pt; text-align: center; vertical-align: middle; }
     .no-border { border: none !important; }
-    col.c0,col.c1,col.c2,col.c3,col.c4,col.c5 { width: 8%; }
-    col.c6 { width: 5%; }
-    col.c7 { width: 39%; }
+    col.c0 { width: 14%; }
+    col.c1 { width: 10%; }
+    col.c2 { width: 10%; }
+    col.c3 { width: 10%; }
+    col.c4 { width: 12%; }
+    col.c5 { width: 12%; }
+    col.c6 { width: 4%; }
+    col.c7 { width: 28%; }
   </style>
 </head>
 <body>
@@ -72,7 +89,7 @@
     <td class="cb-lbl" rowspan="2">PATIENT DIED</td>
   </tr>
   <tr>
-    <td class="val-lg narrative-cell" colspan="6" rowspan="6">{{narrative}}</td>
+    <td class="val-lg narrow-cell narrative-cell" colspan="6" rowspan="6">{{narrative}}</td>
   </tr>
   <tr><td class="cb">{{cb_life}}</td><td class="cb-lbl">LIFE THREATENING</td></tr>
   <tr><td class="cb">{{cb_hosp}}</td><td class="cb-lbl">INVOLVED OR PROLONGED INPATIENT HOSPITALIZATION</td></tr>
@@ -114,9 +131,9 @@
 
   <tr><td class="section" colspan="8">III. CONCOMITANT DRUG(S) AND HISTORY</td></tr>
   <tr><td class="lbl" colspan="8">22. CONCOMITANT DRUGS AND DATES OF ADMINISTRATION (Exclude those used to treat event)</td></tr>
-  <tr><td class="val-lg" colspan="8">{{concomitant22}}</td></tr>
+  <tr><td class="val-lg full-cell" colspan="8">{{concomitant22}}</td></tr>
   <tr><td class="lbl" colspan="8">23. OTHER RELEVANT HISTORY</td></tr>
-  <tr><td class="val-lg" colspan="8">{{history23}}</td></tr>
+  <tr><td class="val-lg full-cell" colspan="8">{{history23}}</td></tr>
 
   <tr><td class="section" colspan="8">IV. MANUFACTURER INFORMATION</td></tr>
   <tr>
@@ -133,27 +150,37 @@
   </tr>
   <tr>
     <td class="val" colspan="4">{{mfr24b}}</td>
-    <td class="lbl" colspan="4">25b. NAME AND ADDRESS OF REPORTER</td>
+    <td class="lbl-iv" colspan="4">25b. NAME AND ADDRESS OF REPORTER</td>
   </tr>
   <tr>
-    <td class="lbl" rowspan="2">24c. DATE RECEIVED BY<br>MANUFACTURER</td>
-    <td class="lbl" colspan="3">24d. REPORT SOURCE</td>
+    <td class="lbl-iv" rowspan="2">24c. DATE RECEIVED BY<br>MANUFACTURER</td>
+    <td class="lbl-iv" colspan="3">24d. REPORT SOURCE</td>
     <td class="val-lg" colspan="4" rowspan="3">{{reporter25b}}</td>
   </tr>
   <tr>
-    <td class="yn" colspan="3" rowspan="2">{{src_study}} STUDY {{src_literature}} LITERATURE {{src_authority}} AUTHORITY<br>{{src_hp}} HEALTH PROFESSIONAL {{src_other}} OTHER</td>
+    <td class="yn" colspan="3" rowspan="2">
+      <span class="opt">{{src_study}} STUDY</span>
+      <span class="opt">{{src_literature}} LITERATURE</span>
+      <span class="opt">{{src_authority}} AUTHORITY</span>
+      <span class="opt">{{src_hp}} HEALTH PROFESSIONAL</span>
+      <span class="opt">{{src_other}} OTHER</span>
+    </td>
   </tr>
   <tr>
-    <td class="val">{{recv24c}}</td>
+    <td class="val-date">{{recv24c}}</td>
   </tr>
   <tr>
-    <td class="lbl">DATE OF THIS REPORT</td>
-    <td class="lbl" colspan="3">25a. REPORT TYPE</td>
+    <td class="lbl-iv">DATE OF THIS REPORT</td>
+    <td class="lbl-iv" colspan="3">25a. REPORT TYPE</td>
     <td colspan="4" class="no-border"></td>
   </tr>
   <tr>
-    <td class="val">{{report_date}}</td>
-    <td class="yn" colspan="3">{{type_initial}} INITIAL {{type_followup}} FOLLOWUP {{type_final}} FINAL</td>
+    <td class="val-date">{{report_date}}</td>
+    <td class="yn" colspan="3">
+      <span class="opt">{{type_initial}} INITIAL</span>
+      <span class="opt">{{type_followup}} FOLLOWUP</span>
+      <span class="opt">{{type_final}} FINAL</span>
+    </td>
     <td colspan="4" class="no-border"></td>
   </tr>
 </table>

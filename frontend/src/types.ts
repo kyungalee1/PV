@@ -28,6 +28,7 @@ export interface CiomsFormData {
   reaction_meddra_pt: string;
   reaction_verbatim: string;
   reaction_onset_date: string;
+  reaction_onset_display: string;
   reaction_end_date: string;
   reaction_outcome: string;
   seriousness_death: boolean;

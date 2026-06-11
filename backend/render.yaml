@@ -10,6 +10,6 @@ services:
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: CORS_ORIGINS
-        sync: false
+        value: https://pv-five-wine.vercel.app,http://localhost:5173,http://127.0.0.1:5173
       - key: PYTHON_VERSION
         value: "3.12"

@@ -30,9 +30,21 @@ from app.services.pdf_generator import generate_cioms_pdf
 
 logger = logging.getLogger(__name__)
 
+EXTRACTOR_VERSION = "2025-06-drug14-v2"
+
 app = FastAPI(title="CIOMS Literature Converter", version="2.0.0")
 
-_default_origins = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174"
+
+@app.on_event("startup")
+def _log_extractor_version() -> None:
+    logger.info("CIOMS extractor loaded: %s", EXTRACTOR_VERSION)
+    print(f"[CIOMS] extractor_version={EXTRACTOR_VERSION}", flush=True)
+
+_default_origins = (
+    "https://pv-five-wine.vercel.app,"
+    "http://localhost:5173,http://127.0.0.1:5173,"
+    "http://localhost:5174,http://127.0.0.1:5174"
+)
 _cors_origins = [
     o.strip()
     for o in os.getenv("CORS_ORIGINS", _default_origins).split(",")
@@ -71,7 +83,7 @@ def _to_response(record: CaseRecord) -> CaseResponse:
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "extractor_version": EXTRACTOR_VERSION}
 
 
 @app.get("/api/dashboard/stats", response_model=DashboardStats)
@@ -202,7 +214,12 @@ async def convert_literature(file: UploadFile = File(...)):
         with dest.open("wb") as f:
             shutil.copyfileobj(file.file, f)
         parsed = await run_in_threadpool(parse_uploaded_file, dest)
-        cioms = parsed.get("cioms", {})
+        from app.services.english_normalizer import normalize_cioms_dict
+        from app.services.literature_extractor import finalize_cioms_suspect_drug
+
+        cioms = finalize_cioms_suspect_drug(
+            normalize_cioms_dict(parsed.get("cioms", {}))
+        )
         if not cioms.get("date_of_report"):
             cioms["date_of_report"] = date.today().isoformat()
         html = generate_cioms_html(cioms, case_id=0)
@@ -222,7 +239,12 @@ async def convert_literature(file: UploadFile = File(...)):
 @app.post("/api/literature/html")
 def render_literature_html(payload: LiteratureHtmlRequest):
     """Regenerate HTML from edited CIOMS fields (no database)."""
-    cioms = dict(payload.cioms)
+    from app.services.english_normalizer import normalize_cioms_dict
+    from app.services.literature_extractor import finalize_cioms_suspect_drug
+
+    cioms = finalize_cioms_suspect_drug(
+        normalize_cioms_dict(dict(payload.cioms))
+    )
     if not cioms.get("date_of_report"):
         cioms["date_of_report"] = date.today().isoformat()
     return {"html": generate_cioms_html(cioms, case_id=0)}

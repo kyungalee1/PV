@@ -11,7 +11,21 @@ import pandas as pd
 import pdfplumber
 
 from app.schemas import CiomsFormData
-from app.services.literature_extractor import extract_cioms_from_literature
+from app.services.cioms_defaults import apply_cioms_defaults
+from app.services.literature_extractor import (
+    _ensure_suspect_drug,
+    _extract_drug,
+    extract_cioms_from_literature,
+)
+from app.services.pdf_text_utils import repair_pdf_text
+from app.services.field_sanitizer import (
+    parse_onset_date,
+    prepare_narrative_for_display,
+    sanitize_age,
+    sanitize_outcome,
+    sanitize_sex,
+    sanitize_weight,
+)
 
 # Keyword maps (Korean + English) -> CIOMS field hints
 AE_KEYWORDS = re.compile(
@@ -88,7 +102,7 @@ def extract_from_pdf(path: Path) -> tuple[str, list[dict[str, Any]]]:
                 except Exception:
                     t = ""
                 if t.strip():
-                    texts.append(t)
+                    texts.append(repair_pdf_text(t))
                 try:
                     page_tables = page.extract_tables() or []
                 except Exception:
@@ -100,7 +114,12 @@ def extract_from_pdf(path: Path) -> tuple[str, list[dict[str, Any]]]:
                     rows = []
                     for row in table[1:]:
                         rows.append(dict(zip(headers, [_clean(c) for c in row])))
-                    tables.append({"page": i + 1, "table_index": ti, "rows": rows})
+                    tables.append({
+                        "page": i + 1,
+                        "table_index": ti,
+                        "rows": rows,
+                        "raw": table,
+                    })
             if total > MAX_PDF_PAGES:
                 texts.append(
                     f"[Note: PDF has {total} pages; first {MAX_PDF_PAGES} pages were parsed.]"
@@ -183,7 +202,7 @@ def build_cioms_from_content(
     source_type: str,
 ) -> CiomsFormData:
     if source_type == "literature":
-        return extract_cioms_from_literature(text)
+        return extract_cioms_from_literature(text, tables=tables)
     ae = _find_label_value(
         text,
         [
@@ -197,26 +216,32 @@ def build_cioms_from_content(
         ],
     ) or _infer_ae_from_tables(tables)
 
-    drug = _find_label_value(
-        text,
-        [
-            "Suspect drug",
-            "Drug name",
-            "Product",
-            "Medicinal product",
-            "의약품",
-            "제품명",
-            "Suspected medicinal product",
-        ],
-    )
-    narrative_parts = [text[:4000]] if text else []
-    for tbl in tables[:3]:
-        for row in tbl.get("rows", [])[:5]:
-            if isinstance(row, dict):
-                narrative_parts.append(" | ".join(f"{k}: {v}" for k, v in row.items() if _clean(v)))
+    drug = _ensure_suspect_drug(_extract_drug(text), text, tables)
+    sex_raw = _find_label_value(text, ["Sex", "Gender", "성별"])
+    sex = sanitize_sex(sex_raw, full_text=text)
+    age = sanitize_age(_find_label_value(text, ["Age", "나이", "Patient age"]))
+    weight = sanitize_weight(_find_label_value(text, ["Weight", "체중"]))
+    outcome = sanitize_outcome(_find_label_value(text, ["Outcome", "결과", "Event outcome"]))
 
     is_sae = _infer_sae(text, tables)
-    onset = _find_label_value(text, ["Onset", "Start date", "발현일", "Reaction onset"]) or _parse_date(text)
+    onset_raw = _find_label_value(
+        text,
+        [
+            "Reaction onset date",
+            "Onset date",
+            "Date of onset",
+            "AE onset date",
+            "SAE onset date",
+            "Reaction onset",
+            "Onset",
+            "Start date",
+            "발현일",
+            "이상반응 발생일",
+        ],
+    )
+    onset = parse_onset_date(onset_raw) if onset_raw else ""
+    if not onset:
+        onset = parse_onset_date(text)
 
     source_cioms = {
         "clinical_data": "STUDY",
@@ -226,29 +251,44 @@ def build_cioms_from_content(
         "spontaneous": "HEALTH PROFESSIONAL",
     }.get(source_type, "OTHER")
 
-    return CiomsFormData(
+    causality = _find_label_value(text, ["Causality", "Assessment", "인과관계"])
+    cioms_preview = {
+        "patient_sex": sex,
+        "patient_age": age,
+        "patient_weight_kg": weight,
+        "suspect_drug_name": drug["suspect_drug_name"],
+        "suspect_drug_active_substance": drug["suspect_drug_active_substance"],
+        "suspect_drug_dose": drug["suspect_drug_dose"],
+        "suspect_drug_route": drug["suspect_drug_route"],
+        "suspect_drug_indication": drug["suspect_drug_indication"],
+        "reaction_verbatim": ae,
+        "reaction_meddra_pt": ae,
+        "reaction_outcome": outcome,
+        "causality_assessment": causality,
+        "_source_text": text,
+    }
+    narrative = prepare_narrative_for_display(cioms_preview)
+
+    data = CiomsFormData(
         report_type="Spontaneous" if source_type in ("email", "literature", "spontaneous") else "Study",
         report_source_cioms=source_cioms,
         date_of_report=date.today().isoformat(),
         patient_initials=_find_label_value(text, ["Patient initials", "Initials", "환자 이니셜"]),
-        patient_age=_find_label_value(text, ["Age", "나이", "Patient age"]),
-        patient_sex=_find_label_value(text, ["Sex", "Gender", "성별"]),
-        patient_weight_kg=_find_label_value(text, ["Weight", "체중"]),
-        suspect_drug_name=drug,
-        suspect_drug_active_substance=_find_label_value(
-            text, ["Active substance", "Ingredient", "유효성분"]
-        ),
-        suspect_drug_dose=_find_label_value(text, ["Dose", "Dosage", "용량", "Daily dose"]),
-        suspect_drug_route=_find_label_value(text, ["Route", "투여경로", "Administration route"]),
-        suspect_drug_indication=_find_label_value(text, ["Indication", "적응증"]),
-        suspect_drug_start_date=_find_label_value(text, ["Drug start", "Therapy start", "투여 시작일"]),
-        suspect_drug_stop_date=_find_label_value(text, ["Drug stop", "Therapy end", "투여 종료일"]),
+        patient_age=age or "UK",
+        patient_sex=sex or "UK",
+        patient_weight_kg=weight or "UK",
+        suspect_drug_name=drug["suspect_drug_name"],
+        suspect_drug_active_substance=drug["suspect_drug_active_substance"],
+        suspect_drug_dose=drug["suspect_drug_dose"],
+        suspect_drug_route=drug["suspect_drug_route"],
+        suspect_drug_indication=drug["suspect_drug_indication"],
+        suspect_drug_start_date=drug["suspect_drug_start_date"],
+        suspect_drug_stop_date=drug["suspect_drug_stop_date"],
+        therapy_duration=drug["therapy_duration"],
         reaction_meddra_pt=ae,
         reaction_verbatim=ae,
-        reaction_onset_date=onset,
-        reaction_outcome=_find_label_value(
-            text, ["Outcome", "결과", "Event outcome"]
-        ),
+        reaction_onset_date=onset or "UK",
+        reaction_outcome=outcome or "UK",
         seriousness_death=bool(re.search(r"\bdeath\b|사망", text, re.I)),
         seriousness_life_threatening=bool(
             re.search(r"life.?threat|생명", text, re.I)
@@ -256,11 +296,10 @@ def build_cioms_from_content(
         seriousness_hospitalization=bool(
             re.search(r"hospital|입원", text, re.I)
         ),
-        narrative="\n".join(narrative_parts)[:8000],
-        causality_assessment=_find_label_value(
-            text, ["Causality", "Assessment", "인과관계"]
-        ),
+        narrative=narrative[:8000],
+        causality_assessment=causality,
     )
+    return apply_cioms_defaults(data)
 
 
 def detect_source_type(filename: str) -> str:
@@ -296,12 +335,18 @@ def parse_uploaded_file(path: Path) -> dict[str, Any]:
     ae_name = cioms.reaction_meddra_pt or cioms.reaction_verbatim or "Unknown AE"
     is_sae = _infer_sae(text, tables)
 
+    from app.services.literature_extractor import finalize_cioms_suspect_drug
+
+    cioms_payload = finalize_cioms_suspect_drug(cioms.model_dump())
+    cioms_payload["_source_text"] = text[:80000]
+    cioms_payload = finalize_cioms_suspect_drug(cioms_payload)
+
     return {
         "source": source,
         "ae_name": ae_name[:500],
         "is_sae": is_sae,
         "collection_date": date.today().isoformat(),
-        "cioms": cioms.model_dump(),
+        "cioms": cioms_payload,
         "extracted_text_preview": text[:2000],
         "tables_count": len(tables),
     }

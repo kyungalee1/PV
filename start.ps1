@@ -11,7 +11,7 @@ if (-not (Test-Path $python)) {
 Start-Process powershell -ArgumentList @(
   "-NoExit",
   "-Command",
-  "cd '$root\backend'; & '$python' -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000"
+  "cd '$root\backend'; Write-Host '[BACKEND] Auto-reload ON' -ForegroundColor Cyan; & '$python' -m uvicorn app.main:app --reload --reload-dir app --reload-include '*.py' --reload-include '*.html' --reload-delay 0.4 --host 127.0.0.1 --port 8000"
 )
 
 Start-Sleep -Seconds 2

@@ -2,6 +2,15 @@
 
 from __future__ import annotations
 
+from app.services.english_normalizer import normalize_cioms_dict
+from app.services.field_sanitizer import (
+    format_reaction_onset_field,
+    prepare_narrative_for_display,
+    sanitize_age,
+    sanitize_sex,
+)
+from app.services.literature_extractor import UK
+
 
 def txt(s: str | None) -> str:
     if s is None:
@@ -26,28 +35,14 @@ def infer_report_source(cioms: dict) -> str:
 
 
 def reaction_onset_lines(cioms: dict) -> str:
-    pt = txt(cioms.get("reaction_meddra_pt"))
-    vb = txt(cioms.get("reaction_verbatim"))
-    onset = txt(cioms.get("reaction_onset_date")) or "UK"
-    lines = []
-    if pt or vb:
-        lines.append(f"{pt or vb} : {onset}")
-    if pt and vb and pt.lower() != vb.lower():
-        lines.append(f"{vb} : {onset}")
-    return "\n".join(lines) if lines else ""
+    """Field 4-6: onset date only (YYYY-MM-DD)."""
+    return format_reaction_onset_field(cioms)
 
 
 def narrative_text(cioms: dict) -> str:
-    parts = []
-    if txt(cioms.get("narrative")):
-        parts.append(txt(cioms["narrative"]))
-    if txt(cioms.get("suspect_drug_name")):
-        parts.append(f"Suspected Drug Information: {txt(cioms.get('suspect_drug_name'))}")
-    if txt(cioms.get("reaction_meddra_pt")):
-        parts.append(f"Adverse Reaction: {txt(cioms.get('reaction_meddra_pt'))}")
-    if txt(cioms.get("causality_assessment")):
-        parts.append(f"Report and Overall Opinion: {txt(cioms.get('causality_assessment'))}")
-    return "\n\n".join(parts) if parts else ""
+    """Field 7+13: prose narrative; symbols expanded; summarized if too long."""
+    text = prepare_narrative_for_display(cioms)
+    return text if text != "UK" else "UK"
 
 
 def yn_checked(answer: str, option: str) -> bool:
@@ -55,15 +50,17 @@ def yn_checked(answer: str, option: str) -> bool:
 
 
 def build_cioms_context(cioms: dict, case_id: int) -> dict[str, str]:
+    from app.services.literature_extractor import resolve_suspect_drug_display
+
+    cioms = normalize_cioms_dict(dict(cioms))
     age = txt(cioms.get("patient_age")) or "UK"
-    sex = txt(cioms.get("patient_sex")) or "UK"
-    drug = txt(cioms.get("suspect_drug_name")) or txt(cioms.get("suspect_drug_active_substance")) or "UK"
-    substance = txt(cioms.get("suspect_drug_active_substance"))
-    dose14 = txt(cioms.get("suspect_drug_dose"))
-    if substance and substance.lower() not in drug.lower():
-        drug = f"{drug} ({substance})"
-    if dose14 and dose14 not in drug:
-        drug = f"{drug} — {dose14}"
+    sex = sanitize_sex(txt(cioms.get("patient_sex"))) or "UK"
+    if age != "UK":
+        age = sanitize_age(age) or "UK"
+    drug = resolve_suspect_drug_display(
+        cioms,
+        source_text=str(cioms.get("_source_text") or ""),
+    )
     therapy = ""
     if txt(cioms.get("suspect_drug_start_date")) or txt(cioms.get("suspect_drug_stop_date")):
         therapy = f"{txt(cioms.get('suspect_drug_start_date'))} / {txt(cioms.get('suspect_drug_stop_date'))}".strip(" /")

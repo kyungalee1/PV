@@ -10,6 +10,7 @@ from pathlib import Path
 import fitz  # PyMuPDF
 
 from app.config import CIOMS_TEMPLATE_PDF
+from app.services.cioms_mapping import narrative_text as _cioms_narrative_text
 
 VALUE_BLUE = (0, 0, 0.85)
 FONT = "helv"
@@ -87,28 +88,14 @@ def _infer_report_source(cioms: dict) -> str:
 
 
 def _reaction_onset_lines(cioms: dict) -> str:
-    pt = _txt(cioms.get("reaction_meddra_pt"))
-    vb = _txt(cioms.get("reaction_verbatim"))
-    onset = _txt(cioms.get("reaction_onset_date")) or "UK"
-    lines = []
-    if pt or vb:
-        lines.append(f"{pt or vb} : {onset}")
-    if pt and vb and pt.lower() != vb.lower():
-        lines.append(f"{vb} : {onset}")
-    return "\n".join(lines) if lines else ""
+    """Field 4-6: onset date only."""
+    from app.services.field_sanitizer import format_reaction_onset_field
+
+    return format_reaction_onset_field(cioms)
 
 
 def _narrative_text(cioms: dict) -> str:
-    parts = []
-    if _txt(cioms.get("narrative")):
-        parts.append(_txt(cioms["narrative"]))
-    if _txt(cioms.get("suspect_drug_name")):
-        parts.append(f"Suspected Drug Information: {_txt(cioms.get('suspect_drug_name'))}")
-    if _txt(cioms.get("reaction_meddra_pt")):
-        parts.append(f"Adverse Reaction: {_txt(cioms.get('reaction_meddra_pt'))}")
-    if _txt(cioms.get("causality_assessment")):
-        parts.append(f"Report and Overall Opinion: {_txt(cioms.get('causality_assessment'))}")
-    return "\n\n".join(parts) if parts else ""
+    return _cioms_narrative_text(cioms)
 
 
 def _yn_checked(answer: str, option: str) -> bool:
@@ -152,7 +139,12 @@ def generate_cioms_pdf(cioms: dict, case_id: int, output_path: Path) -> Path:
 
     age = _txt(cioms.get("patient_age")) or "UK"
     sex = _txt(cioms.get("patient_sex")) or "UK"
-    drug = _txt(cioms.get("suspect_drug_name")) or _txt(cioms.get("suspect_drug_active_substance")) or "UK"
+    from app.services.literature_extractor import resolve_suspect_drug_display
+
+    drug = resolve_suspect_drug_display(
+        cioms,
+        source_text=str(cioms.get("_source_text") or ""),
+    )
     therapy = ""
     if _txt(cioms.get("suspect_drug_start_date")) or _txt(cioms.get("suspect_drug_stop_date")):
         therapy = f"{_txt(cioms.get('suspect_drug_start_date'))} / {_txt(cioms.get('suspect_drug_stop_date'))}".strip(" /")
