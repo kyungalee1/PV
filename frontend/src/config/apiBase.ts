@@ -9,6 +9,11 @@ export function resolveApiBase(): string {
   const isLocalHost =
     host === "localhost" || host === "127.0.0.1" || host === "[::1]";
 
+  // Vercel hosts: always use same-origin /api proxy (vercel.json → Render)
+  if (host.endsWith(".vercel.app") || host.endsWith(".vercel.dev")) {
+    return "/api";
+  }
+
   const pointsToLocal =
     !!envBase &&
     (envBase.includes("127.0.0.1") || envBase.includes("localhost"));
