@@ -157,8 +157,24 @@ vercel --prod
 
 Events에 **Deploy failed** / **status 1 while building** 이 보이면 **pip 설치 단계**에서 실패한 것입니다.
 
+### `pydantic-core` / `maturin` / `python3.14` 오류
+
+로그에 `python3.14`, `maturin failed`, `Read-only file system` 이 보이면  
+Render가 **Python 3.14**(기본값)로 빌드해서 `pydantic` 휠이 없고 Rust 컴파일이 실패한 것입니다.
+
+**Render → pv-qce5 → Environment** 에 반드시 추가:
+
+| Key | Value |
+|-----|--------|
+| `PYTHON_VERSION` | `3.11.11` |
+
+저장 후 **Manual Deploy** → Deploy latest commit.
+
+(저장소에 `backend/.python-version` 도 있지만, 대시보드에 `PYTHON_VERSION` 을 넣는 것이 가장 확실합니다.)
+
 | 원인 | 해결 |
 |------|------|
+| Python 3.14 기본값 | `PYTHON_VERSION` = **`3.11.11`** |
 | `pandas` / `pymupdf` 메모리 부족 | 최신 `requirements.txt`는 Render용으로 경량화됨 → **Redeploy** |
 | Build Command가 `bash build.sh` | **`pip install --no-cache-dir -r requirements.txt`** 로 변경 |
 | Root Directory 오류 | 반드시 **`backend`** |
@@ -190,6 +206,7 @@ Events에 **Deploy failed** / **status 1 while building** 이 보이면 **pip �
 | Key | Value |
 |-----|--------|
 | `CORS_ORIGINS` | `https://pv-five-wine.vercel.app` |
+| `PYTHON_VERSION` | `3.11.11` |
 
 ### 수동 재배포
 
