@@ -153,6 +153,18 @@ vercel --prod
 
 ---
 
+## Render 빌드 실패 (`Exited with status 1 while building`)
+
+Events에 **Deploy failed** / **status 1 while building** 이 보이면 **pip 설치 단계**에서 실패한 것입니다.
+
+| 원인 | 해결 |
+|------|------|
+| `pandas` / `pymupdf` 메모리 부족 | 최신 `requirements.txt`는 Render용으로 경량화됨 → **Redeploy** |
+| Build Command가 `bash build.sh` | **`pip install --no-cache-dir -r requirements.txt`** 로 변경 |
+| Root Directory 오류 | 반드시 **`backend`** |
+
+---
+
 ## Render가 "Application loading" 에서 멈출 때
 
 `https://pv-qce5.onrender.com/api/health` 가 JSON 대신 **Application loading** 만 보이면
@@ -169,7 +181,7 @@ vercel --prod
 | 항목 | 값 |
 |------|-----|
 | Root Directory | **`backend`** |
-| Build Command | `bash build.sh` 또는 `pip install --no-cache-dir -r requirements.txt` |
+| Build Command | `pip install --no-cache-dir -r requirements.txt` |
 | Start Command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
 | Health Check Path | `/api/health` (선택) |
 

@@ -6,8 +6,7 @@ Coordinates calibrated to the blank template (A4 portrait, top-left origin).
 from __future__ import annotations
 
 from pathlib import Path
-
-import fitz  # PyMuPDF
+from typing import Any
 
 from app.config import CIOMS_TEMPLATE_PDF
 from app.services.cioms_mapping import narrative_text as _cioms_narrative_text
@@ -102,7 +101,9 @@ def _yn_checked(answer: str, option: str) -> bool:
     return _txt(answer).upper() == option
 
 
-def _put_text(page: fitz.Page, key: str, text: str, size: float = FONT_SIZE) -> None:
+def _put_text(page: Any, key: str, text: str, size: float = FONT_SIZE) -> None:
+    import fitz
+
     if not text or key not in FIELD_RECTS:
         return
     rect = fitz.Rect(*FIELD_RECTS[key])
@@ -122,7 +123,7 @@ def _put_text(page: fitz.Page, key: str, text: str, size: float = FONT_SIZE) -> 
     )
 
 
-def _put_check(page: fitz.Page, key: str, checked: bool) -> None:
+def _put_check(page: Any, key: str, checked: bool) -> None:
     if not checked or key not in CHECKBOXES:
         return
     x, y = CHECKBOXES[key]
@@ -130,6 +131,13 @@ def _put_check(page: fitz.Page, key: str, checked: bool) -> None:
 
 
 def generate_cioms_pdf(cioms: dict, case_id: int, output_path: Path) -> Path:
+    try:
+        import fitz  # PyMuPDF
+    except ImportError as exc:
+        raise RuntimeError(
+            "PDF export requires pymupdf. Install with: pip install -r requirements-dev.txt"
+        ) from exc
+
     template = CIOMS_TEMPLATE_PDF
     if not template.exists():
         raise FileNotFoundError(f"CIOMS template not found: {template}")

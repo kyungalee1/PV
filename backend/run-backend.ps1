@@ -10,7 +10,7 @@ if (Test-Path $stopScript) {
 }
 if (-not (Test-Path $python)) {
     python -m venv .venv
-    & (Join-Path $PSScriptRoot ".venv\Scripts\pip.exe") install -r requirements.txt
+    & (Join-Path $PSScriptRoot ".venv\Scripts\pip.exe") install -r requirements-dev.txt
 }
 
 Write-Host "Starting backend at http://127.0.0.1:8000"

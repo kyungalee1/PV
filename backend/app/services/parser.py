@@ -7,7 +7,6 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
-import pandas as pd
 import pdfplumber
 
 from app.schemas import CiomsFormData
@@ -53,7 +52,9 @@ MAX_PDF_TABLES_PER_PAGE = 5
 
 
 def _clean(val: Any) -> str:
-    if val is None or (isinstance(val, float) and pd.isna(val)):
+    if val is None:
+        return ""
+    if isinstance(val, float) and val != val:  # NaN
         return ""
     return str(val).strip()
 
@@ -81,7 +82,7 @@ def _find_label_value(text: str, labels: list[str]) -> str:
     return ""
 
 
-def _sheet_to_text(df: pd.DataFrame) -> str:
+def _sheet_to_text(df: Any) -> str:
     lines = []
     for _, row in df.iterrows():
         cells = [_clean(c) for c in row.values if _clean(c)]
@@ -130,6 +131,13 @@ def extract_from_pdf(path: Path) -> tuple[str, list[dict[str, Any]]]:
 
 
 def extract_from_excel(path: Path) -> tuple[str, list[dict[str, Any]]]:
+    try:
+        import pandas as pd
+    except ImportError as exc:
+        raise ValueError(
+            "Excel upload requires pandas (not installed on this server)."
+        ) from exc
+
     xl = pd.ExcelFile(path)
     parts: list[str] = []
     tables: list[dict[str, Any]] = []
