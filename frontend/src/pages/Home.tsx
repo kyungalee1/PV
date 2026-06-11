@@ -262,11 +262,14 @@ export default function Home() {
             </div>
 
             {tab === "preview" ? (
-              <div className="overflow-hidden rounded-2xl border border-white/80 bg-white shadow-toss">
+              <div className="rounded-2xl border border-white/80 bg-white shadow-toss">
+                <p className="border-b border-toss-gray-100 px-4 py-2 text-xs text-toss-gray-500 md:hidden">
+                  양식이 넓어요. 아래 미리보기 안에서 좌우로 스크롤해 주세요.
+                </p>
                 <iframe
                   title="CIOMS Preview"
                   srcDoc={html}
-                  className="h-[75vh] w-full bg-white"
+                  className="block h-[min(75vh,900px)] w-full max-w-full bg-white"
                   sandbox="allow-same-origin"
                 />
               </div>
