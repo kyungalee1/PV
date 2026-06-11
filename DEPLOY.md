@@ -150,3 +150,44 @@ vercel --prod
 - [ ] 또는 Vercel: `VITE_API_BASE=https://...onrender.com/api`
 - [ ] Vercel URL을 Render `CORS_ORIGINS`에 추가
 - [ ] PDF 업로드 테스트
+
+---
+
+## Render가 "Application loading" 에서 멈출 때
+
+`https://pv-qce5.onrender.com/api/health` 가 JSON 대신 **Application loading** 만 보이면
+백엔드 프로세스가 아직 뜨지 않았거나 **배포/기동이 실패**한 상태입니다.
+
+### Render 대시보드에서 확인 (필수)
+
+1. https://dashboard.render.com → **pv-qce5** 서비스
+2. **Events** 탭 — 최근 배포가 **Deploy failed** 인지 확인
+3. **Logs** 탭 — 빨간 에러 (예: `ModuleNotFoundError`, `Killed`, `port`)
+
+### 서비스 설정이 아래와 같은지 확인
+
+| 항목 | 값 |
+|------|-----|
+| Root Directory | **`backend`** |
+| Build Command | `bash build.sh` 또는 `pip install --no-cache-dir -r requirements.txt` |
+| Start Command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| Health Check Path | `/api/health` (선택) |
+
+### Environment Variables
+
+| Key | Value |
+|-----|--------|
+| `CORS_ORIGINS` | `https://pv-five-wine.vercel.app` |
+
+### 수동 재배포
+
+**Manual Deploy** → **Deploy latest commit** (GitHub `master` 최신)
+
+### 정상 응답 예시
+
+```json
+{"status":"ok","extractor_version":"2025-06-drug14-v2"}
+```
+
+> 무료 플랜: 15분 미사용 후 슬립 → 첫 요청 **30초~2분** 걸릴 수 있음.  
+> 2분 이상 loading만 보이면 **Logs** 에서 실패 원인을 확인하세요.

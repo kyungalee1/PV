@@ -24,11 +24,25 @@ from app.schemas import (
     LiteratureConvertResponse,
     LiteratureHtmlRequest,
 )
-from app.services.parser import parse_uploaded_file
-from app.services.html_generator import generate_cioms_html
-from app.services.pdf_generator import generate_cioms_pdf
-
 logger = logging.getLogger(__name__)
+
+
+def _parse_uploaded_file(path: Path):
+    from app.services.parser import parse_uploaded_file
+
+    return parse_uploaded_file(path)
+
+
+def _generate_cioms_html(cioms: dict, case_id: int = 0) -> str:
+    from app.services.html_generator import generate_cioms_html
+
+    return generate_cioms_html(cioms, case_id=case_id)
+
+
+def _generate_cioms_pdf(cioms: dict, case_id: int, out: Path) -> None:
+    from app.services.pdf_generator import generate_cioms_pdf
+
+    generate_cioms_pdf(cioms, case_id, out)
 
 EXTRACTOR_VERSION = "2025-06-drug14-v2"
 
@@ -81,6 +95,8 @@ def _to_response(record: CaseRecord) -> CaseResponse:
     )
 
 
+@app.get("/")
+@app.get("/health")
 @app.get("/api/health")
 def health():
     return {"status": "ok", "extractor_version": EXTRACTOR_VERSION}
@@ -213,7 +229,7 @@ async def convert_literature(file: UploadFile = File(...)):
     try:
         with dest.open("wb") as f:
             shutil.copyfileobj(file.file, f)
-        parsed = await run_in_threadpool(parse_uploaded_file, dest)
+        parsed = await run_in_threadpool(_parse_uploaded_file, dest)
         from app.services.english_normalizer import normalize_cioms_dict
         from app.services.literature_extractor import finalize_cioms_suspect_drug
 
@@ -222,7 +238,7 @@ async def convert_literature(file: UploadFile = File(...)):
         )
         if not cioms.get("date_of_report"):
             cioms["date_of_report"] = date.today().isoformat()
-        html = generate_cioms_html(cioms, case_id=0)
+        html = _generate_cioms_html(cioms, case_id=0)
         return LiteratureConvertResponse(
             filename=safe_name,
             ae_name=parsed.get("ae_name", "Unknown AE"),
@@ -247,7 +263,7 @@ def render_literature_html(payload: LiteratureHtmlRequest):
     )
     if not cioms.get("date_of_report"):
         cioms["date_of_report"] = date.today().isoformat()
-    return {"html": generate_cioms_html(cioms, case_id=0)}
+    return {"html": _generate_cioms_html(cioms, case_id=0)}
 
 
 @app.post("/api/literature/upload", response_model=CaseResponse)
@@ -266,7 +282,7 @@ async def upload_literature(
     try:
         with dest.open("wb") as f:
             shutil.copyfileobj(file.file, f)
-        parsed = await run_in_threadpool(parse_uploaded_file, dest)
+        parsed = await run_in_threadpool(_parse_uploaded_file, dest)
     except Exception as e:
         dest.unlink(missing_ok=True)
         logger.exception("Literature parse failed for %s", safe_name)
@@ -307,7 +323,7 @@ async def upload_and_parse(
         with dest.open("wb") as f:
             shutil.copyfileobj(file.file, f)
         logger.info("Uploaded file saved: %s (%s bytes)", dest.name, dest.stat().st_size)
-        parsed = await run_in_threadpool(parse_uploaded_file, dest)
+        parsed = await run_in_threadpool(_parse_uploaded_file, dest)
     except HTTPException:
         dest.unlink(missing_ok=True)
         raise
@@ -352,7 +368,7 @@ def generate_pdf(case_id: int, db: Session = Depends(get_db)):
         cioms["date_of_report"] = date.today().isoformat()
 
     out = PDF_DIR / f"cioms_case_{case_id}.pdf"
-    generate_cioms_pdf(cioms, case_id, out)
+    _generate_cioms_pdf(cioms, case_id, out)
     record.pdf_path = str(out)
     record.status = "completed"
     record.updated_at = datetime.utcnow()
@@ -379,7 +395,7 @@ def download_html(case_id: int, db: Session = Depends(get_db)):
         raise HTTPException(404, "Case not found")
     cioms = _cioms_for_html(record, case_id)
     return HTMLResponse(
-        content=generate_cioms_html(cioms, case_id),
+        content=_generate_cioms_html(cioms, case_id),
         media_type="text/html; charset=utf-8",
     )
 
@@ -390,7 +406,7 @@ def download_html_file(case_id: int, db: Session = Depends(get_db)):
     if not record:
         raise HTTPException(404, "Case not found")
     cioms = _cioms_for_html(record, case_id)
-    html = generate_cioms_html(cioms, case_id)
+    html = _generate_cioms_html(cioms, case_id)
     filename = f"CIOMS_{Path(record.source_file or 'case').stem}.html"
     return Response(
         content=html.encode("utf-8"),

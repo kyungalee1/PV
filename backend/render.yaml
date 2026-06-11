@@ -1,15 +1,19 @@
-# Render.com 배포용 (무료 티어 가능)
-# https://render.com → New → Blueprint 또는 Web Service
+# Render.com — https://dashboard.render.com
+# Manual Web Service settings must match:
+#   Root Directory: backend
+#   Build Command:  ./build.sh  (or: pip install --no-cache-dir -r requirements.txt)
+#   Start Command:  uvicorn app.main:app --host 0.0.0.0 --port $PORT
 services:
   - type: web
-    name: cioms-api
+    name: pv-qce5
     runtime: python
     plan: free
     rootDir: backend
-    buildCommand: pip install -r requirements.txt
+    buildCommand: bash build.sh
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
     envVars:
       - key: CORS_ORIGINS
         value: https://pv-five-wine.vercel.app,http://localhost:5173,http://127.0.0.1:5173
       - key: PYTHON_VERSION
-        value: "3.12"
+        value: "3.11.11"
