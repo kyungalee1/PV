@@ -70,13 +70,19 @@ CORS_ORIGINS=https://your-app.vercel.app
 | Build Command | `npm run build` |
 | Output Directory | `dist` |
 
-4. **Environment Variables** 추가:
+4. **Environment Variables** 추가 (Vercel):
+
+| Name | Value |
+|------|-------|
+| `API_PROXY_TARGET` | `https://cioms-api.onrender.com` |
+
+> `/api` 없이 Render **루트 URL**만 입력. 설정 후 **Redeploy** 필수.
+
+(선택) 직접 호출 방식:
 
 | Name | Value |
 |------|-------|
 | `VITE_API_BASE` | `https://cioms-api.onrender.com/api` |
-
-(Render URL 뒤에 `/api` 포함)
 
 5. **Deploy** 클릭
 
@@ -140,6 +146,7 @@ vercel --prod
 - [ ] Render: `backend` Web Service 배포
 - [ ] Render: `CORS_ORIGINS` 설정
 - [ ] Vercel: `frontend` 프로젝트, Root = `frontend`
-- [ ] Vercel: `VITE_API_BASE=https://...onrender.com/api`
+- [ ] Vercel: `API_PROXY_TARGET=https://...onrender.com` (권장)
+- [ ] 또는 Vercel: `VITE_API_BASE=https://...onrender.com/api`
 - [ ] Vercel URL을 Render `CORS_ORIGINS`에 추가
 - [ ] PDF 업로드 테스트

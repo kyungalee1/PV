@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Download,
   FileText,
@@ -9,7 +9,8 @@ import {
   List,
 } from "lucide-react";
 import { CIOMS_SECTIONS } from "../config/ciomsFields";
-import { api, downloadHtml, emptyCioms } from "../api";
+import { api, downloadHtml, emptyCioms, getApiBase } from "../api";
+import { isDeployedApp } from "../config/apiBase";
 import type { CiomsFormData } from "../types";
 
 type Tab = "preview" | "fields";
@@ -19,6 +20,9 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [serverOk, setServerOk] = useState<boolean | null>(null);
+  const [backendVersion, setBackendVersion] = useState("");
+  const [needsReconvert, setNeedsReconvert] = useState(false);
+  const prevBackendVersion = useRef("");
   const [tab, setTab] = useState<Tab>("preview");
   const [filename, setFilename] = useState("");
   const [aeName, setAeName] = useState("");
@@ -27,9 +31,35 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    api.health()
-      .then(() => setServerOk(true))
-      .catch(() => setServerOk(false));
+    const check = () =>
+      api
+        .health()
+        .then((h) => {
+          setServerOk(true);
+          const ver = h.extractor_version ?? "";
+          if (
+            prevBackendVersion.current &&
+            ver &&
+            prevBackendVersion.current !== ver
+          ) {
+            setNeedsReconvert(true);
+          }
+          prevBackendVersion.current = ver;
+          setBackendVersion(ver);
+        })
+        .catch(() => {
+          setServerOk(false);
+          setBackendVersion("");
+        });
+
+    check();
+    const timer = window.setInterval(check, 5000);
+    const onFocus = () => check();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+    };
   }, []);
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -94,23 +124,52 @@ export default function Home() {
               <p className="text-xs text-toss-gray-500">논문 PDF → CIOMS HTML</p>
             </div>
           </div>
-          {hasResult && (
-            <button
-              type="button"
-              onClick={reset}
-              className="text-sm font-medium text-toss-gray-500 hover:text-toss-blue"
-            >
-              새 변환
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {serverOk && backendVersion && (
+              <span
+                className="hidden rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 sm:inline"
+                title={getApiBase()}
+              >
+                API {backendVersion}
+              </span>
+            )}
+            {hasResult && (
+              <button
+                type="button"
+                onClick={reset}
+                className="text-sm font-medium text-toss-gray-500 hover:text-toss-blue"
+              >
+                새 변환
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-5xl px-5 py-8">
         {serverOk === false && (
           <p className="mb-6 rounded-2xl bg-red-50 px-4 py-3 text-sm text-toss-red">
-            서버에 연결되지 않습니다.{" "}
-            <code className="text-xs">backend\run-backend.ps1</code> 실행 후 새로고침하세요.
+            {isDeployedApp() ? (
+              <>
+                API 서버에 연결되지 않습니다. Vercel → Settings → Environment Variables에{" "}
+                <code className="text-xs">API_PROXY_TARGET</code> = Render 백엔드 URL
+                (예: https://xxx.onrender.com)을 넣고 <strong>Redeploy</strong>하세요.
+                Render 무료 플랜은 첫 요청에 1분 정도 걸릴 수 있습니다.
+              </>
+            ) : (
+              <>
+                서버에 연결되지 않습니다.{" "}
+                <code className="text-xs">.\dev.ps1</code> 실행 후 새로고침하세요.
+              </>
+            )}
+          </p>
+        )}
+
+        {needsReconvert && (
+          <p className="mb-6 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            백엔드가 업데이트되었습니다 ({backendVersion}). 변경 내용을 보려면{" "}
+            <strong>PDF를 다시 업로드</strong>해 주세요. (기존 화면 HTML은 이전
+            추출 결과입니다.)
           </p>
         )}
 

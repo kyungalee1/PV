@@ -1,8 +1,11 @@
 import type { CiomsFormData } from "./types";
+import { isDeployedApp, resolveApiBase } from "./config/apiBase";
 
-const BASE =
-  (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, "") ||
-  "/api";
+const BASE = resolveApiBase();
+
+export function getApiBase(): string {
+  return BASE;
+}
 
 function formatDetail(detail: unknown): string {
   if (typeof detail === "string") return detail;
@@ -21,7 +24,7 @@ function formatDetail(detail: unknown): string {
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const isUpload = options?.body instanceof FormData;
   const controller = new AbortController();
-  const timeoutMs = isUpload ? 300_000 : 60_000;
+  const timeoutMs = isUpload ? 300_000 : isDeployedApp() ? 90_000 : 60_000;
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
@@ -40,6 +43,11 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
         throw new Error("요청 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.");
       }
       if (e.message === "Failed to fetch" || e instanceof TypeError) {
+        if (isDeployedApp()) {
+          throw new Error(
+            "API 서버에 연결할 수 없습니다. Vercel에 API_PROXY_TARGET(Render URL)을 설정했는지, Render 백엔드가 실행 중인지 확인해 주세요.",
+          );
+        }
         throw new Error(
           "서버에 연결할 수 없습니다. 백엔드가 실행 중인지 확인해 주세요.",
         );
@@ -59,7 +67,8 @@ export type ConvertResult = {
 };
 
 export const api = {
-  health: () => request<{ status: string }>("/health"),
+  health: () =>
+    request<{ status: string; extractor_version?: string }>("/health"),
 
   convertLiterature: async (file: File): Promise<ConvertResult> => {
     const fd = new FormData();
@@ -105,6 +114,7 @@ export const emptyCioms = (): CiomsFormData => ({
   reaction_meddra_pt: "",
   reaction_verbatim: "",
   reaction_onset_date: "",
+  reaction_onset_display: "",
   reaction_end_date: "",
   reaction_outcome: "",
   seriousness_death: false,

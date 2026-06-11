@@ -3,5 +3,9 @@ backend/__pycache__/
 data/
 frontend/node_modules/
 frontend/dist/
+.env
+.env.local
+frontend/.env
+frontend/.env.local
 *.db
 __pycache__/
