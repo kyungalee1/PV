@@ -1,10 +1,8 @@
 import type { CiomsFormData } from "./types";
 import { isDeployedApp, resolveApiBase } from "./config/apiBase";
 
-const BASE = resolveApiBase();
-
 export function getApiBase(): string {
-  return BASE;
+  return resolveApiBase();
 }
 
 function formatDetail(detail: unknown): string {
@@ -28,7 +26,7 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const res = await fetch(`${BASE}${url}`, {
+    const res = await fetch(`${getApiBase()}${url}`, {
       ...options,
       signal: controller.signal,
     });
