@@ -84,15 +84,53 @@
       .cb-lbl { font-size: 8pt; }
       .yn, .lbl-iv { font-size: 7.5pt; }
     }
+    .cioms-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .cioms-toolbar button {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #f5f5f5;
+      color: #333;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 12px;
+      cursor: pointer;
+    }
+    .cioms-toolbar button.active {
+      background: #3182f6;
+      border-color: #3182f6;
+      color: #fff;
+    }
+    .cioms-toolbar .hint {
+      font-size: 12px;
+      color: #666;
+    }
     @media print {
       body { margin: 0.6in; padding: 0; }
+      .cioms-toolbar { display: none !important; }
       .cioms-scroll { overflow: visible; }
-      table.cioms-table { min-width: 0; max-width: none; width: 100%; }
+      table.cioms-table {
+        min-width: 0;
+        max-width: none;
+        width: 100%;
+        transform: none !important;
+      }
     }
   </style>
 </head>
 <body>
-<div class="cioms-scroll">
+<div class="cioms-toolbar no-print">
+  <button type="button" id="cioms-btn-fit" class="active">화면에 맞춤</button>
+  <button type="button" id="cioms-btn-original">원본 크기</button>
+  <span class="hint" id="cioms-hint">전체 양식이 한 화면에 맞춰집니다.</span>
+</div>
+<div class="cioms-scroll" id="cioms-scroll">
 <table class="cioms-table">
   <colgroup>
     <col class="c0"><col class="c1"><col class="c2"><col class="c3">
@@ -224,5 +262,54 @@
   </tr>
 </table>
 </div>
+<script>
+(function () {
+  var FORM_W = 720;
+  var fit = window.matchMedia("(max-width: 768px)").matches;
+  var scroll = document.getElementById("cioms-scroll");
+  var table = document.querySelector(".cioms-table");
+  var btnFit = document.getElementById("cioms-btn-fit");
+  var btnOrig = document.getElementById("cioms-btn-original");
+  var hint = document.getElementById("cioms-hint");
+  if (!scroll || !table || !btnFit || !btnOrig) return;
+
+  function setActive() {
+    btnFit.classList.toggle("active", fit);
+    btnOrig.classList.toggle("active", !fit);
+    hint.textContent = fit
+      ? "전체 양식이 한 화면에 맞춰집니다."
+      : "좌우·상하 스크롤로 자세히 볼 수 있습니다.";
+  }
+
+  function apply() {
+    if (!fit) {
+      table.style.transform = "";
+      table.style.transformOrigin = "";
+      scroll.style.height = "";
+      scroll.style.overflowX = "";
+      setActive();
+      return;
+    }
+    var s = Math.min(1, scroll.clientWidth / FORM_W);
+    table.style.transform = "scale(" + s + ")";
+    table.style.transformOrigin = "top left";
+    scroll.style.overflowX = "hidden";
+    scroll.style.height = table.offsetHeight * s + "px";
+    setActive();
+  }
+
+  btnFit.addEventListener("click", function () {
+    fit = true;
+    apply();
+  });
+  btnOrig.addEventListener("click", function () {
+    fit = false;
+    apply();
+  });
+  window.addEventListener("resize", apply);
+  if (window.matchMedia("(max-width: 768px)").matches) fit = true;
+  apply();
+})();
+</script>
 </body>
 </html>

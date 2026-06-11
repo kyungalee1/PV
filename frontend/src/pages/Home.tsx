@@ -3,6 +3,8 @@ import {
   Download,
   FileText,
   Loader2,
+  Maximize2,
+  Minimize2,
   RefreshCw,
   Upload,
   Eye,
@@ -14,6 +16,9 @@ import { isDeployedApp } from "../config/apiBase";
 import type { CiomsFormData } from "../types";
 
 type Tab = "preview" | "fields";
+
+const CIOMS_PREVIEW_WIDTH = 720;
+const CIOMS_PREVIEW_HEIGHT = 960;
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
@@ -29,6 +34,13 @@ export default function Home() {
   const [cioms, setCioms] = useState<CiomsFormData | null>(null);
   const [html, setHtml] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [fitPreview, setFitPreview] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 768px)").matches,
+  );
+  const [previewScale, setPreviewScale] = useState(1);
+  const previewBoxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const check = () =>
@@ -61,6 +73,30 @@ export default function Home() {
       window.removeEventListener("focus", onFocus);
     };
   }, []);
+
+  useEffect(() => {
+    if (!fitPreview || tab !== "preview" || !html) {
+      setPreviewScale(1);
+      return;
+    }
+    const box = previewBoxRef.current;
+    if (!box) return;
+
+    const updateScale = () => {
+      const width = box.clientWidth;
+      if (!width) return;
+      setPreviewScale(Math.min(1, width / CIOMS_PREVIEW_WIDTH));
+    };
+
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(box);
+    window.addEventListener("resize", updateScale);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateScale);
+    };
+  }, [fitPreview, tab, html]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -263,15 +299,73 @@ export default function Home() {
 
             {tab === "preview" ? (
               <div className="rounded-2xl border border-white/80 bg-white shadow-toss">
-                <p className="border-b border-toss-gray-100 px-4 py-2 text-xs text-toss-gray-500 md:hidden">
-                  양식이 넓어요. 아래 미리보기 안에서 좌우로 스크롤해 주세요.
-                </p>
-                <iframe
-                  title="CIOMS Preview"
-                  srcDoc={html}
-                  className="block h-[min(75vh,900px)] w-full max-w-full bg-white"
-                  sandbox="allow-same-origin"
-                />
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-toss-gray-100 px-4 py-2">
+                  <div className="flex gap-1 rounded-lg bg-toss-gray-100 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setFitPreview(true)}
+                      className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold ${
+                        fitPreview
+                          ? "bg-white text-toss-blue shadow-sm"
+                          : "text-toss-gray-600"
+                      }`}
+                    >
+                      <Minimize2 size={14} />
+                      화면에 맞춤
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFitPreview(false)}
+                      className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold ${
+                        !fitPreview
+                          ? "bg-white text-toss-blue shadow-sm"
+                          : "text-toss-gray-600"
+                      }`}
+                    >
+                      <Maximize2 size={14} />
+                      원본 크기
+                    </button>
+                  </div>
+                  <p className="text-xs text-toss-gray-500">
+                    {fitPreview
+                      ? "전체 양식이 한 화면에 맞춰집니다."
+                      : "좌우·상하 스크롤로 자세히 볼 수 있습니다."}
+                  </p>
+                </div>
+                <div
+                  ref={previewBoxRef}
+                  className={
+                    fitPreview
+                      ? "overflow-hidden bg-white"
+                      : "overflow-auto bg-white"
+                  }
+                  style={
+                    fitPreview
+                      ? { height: CIOMS_PREVIEW_HEIGHT * previewScale }
+                      : undefined
+                  }
+                >
+                  <iframe
+                    title="CIOMS Preview"
+                    srcDoc={html}
+                    className={
+                      fitPreview
+                        ? "block border-0 bg-white"
+                        : "block h-[min(75vh,900px)] w-full max-w-full border-0 bg-white"
+                    }
+                    style={
+                      fitPreview
+                        ? {
+                            width: CIOMS_PREVIEW_WIDTH,
+                            height: CIOMS_PREVIEW_HEIGHT,
+                            transform: `scale(${previewScale})`,
+                            transformOrigin: "top left",
+                          }
+                        : undefined
+                    }
+                    sandbox="allow-same-origin"
+                  />
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
