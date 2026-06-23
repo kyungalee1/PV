@@ -81,12 +81,21 @@ def compute_therapy_duration(start: str, stop: str) -> str:
 
 
 def build_reaction_onset_display(reaction: dict[str, Any]) -> str:
-    """Field 4-6: onset date only (YYYY-MM-DD)."""
-    parsed = parse_onset_date(str(reaction.get("reaction_onset_date") or ""))
-    if parsed:
-        return parsed
+    """Field 4-6: onset date(s) per reaction when available."""
+    from app.services.field_sanitizer import format_reaction_onset_field, parse_flexible_date
+
+    prebuilt = str(reaction.get("reaction_onset_display") or "").strip()
+    if prebuilt and prebuilt.upper() != UK:
+        return prebuilt
+    onset = str(reaction.get("reaction_onset_date") or "").strip()
+    if onset and onset.upper() != UK:
+        if ";" in onset or ":" in onset:
+            return onset
+        parsed = parse_flexible_date(onset)
+        if parsed:
+            return parsed
     for key in ("labeled_ae", "reaction_verbatim", "reaction_meddra_pt", "labeled_sae"):
-        parsed = parse_onset_date(str(reaction.get(key) or ""))
+        parsed = parse_flexible_date(str(reaction.get(key) or ""))
         if parsed:
             return parsed
     return UK

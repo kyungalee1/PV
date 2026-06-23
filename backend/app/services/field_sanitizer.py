@@ -190,14 +190,75 @@ def parse_onset_date(text: str) -> str:
     return ""
 
 
+_MONTH_NAME = (
+    r"January|February|March|April|May|June|July|August|"
+    r"September|October|November|December"
+)
+
+
+def parse_flexible_date(text: str) -> str:
+    """Partial or full calendar text: YYYY-MM-DD, YYYY-MM, YYYY, or month name."""
+    if not text or str(text).strip().upper() == UK:
+        return ""
+    s = _clean(text)
+    full = parse_onset_date(s)
+    if full:
+        return full
+
+    m = re.match(r"^(\d{4})[-/.](\d{1,2})$", s)
+    if m:
+        return f"{m.group(1)}-{int(m.group(2)):02d}"
+
+    m = re.match(r"^(\d{4})$", s)
+    if m:
+        return m.group(1)
+
+    m = re.search(rf"({_MONTH_NAME})\s+(\d{{4}})", s, re.I)
+    if m:
+        try:
+            return datetime.strptime(f"{m.group(1)} {m.group(2)}", "%B %Y").strftime("%Y-%m")
+        except ValueError:
+            pass
+
+    m = re.search(rf"(\d{{4}})\s+({_MONTH_NAME})", s, re.I)
+    if m:
+        try:
+            return datetime.strptime(f"{m.group(2)} {m.group(1)}", "%B %Y").strftime("%Y-%m")
+        except ValueError:
+            pass
+
+    m = re.match(rf"^({_MONTH_NAME})$", s, re.I)
+    if m:
+        return m.group(1).title()
+
+    m = re.search(r"\b(19|20)\d{2}\b", s)
+    if m:
+        return m.group(0)
+
+    m = re.search(r"\b(0?[1-9]|1[0-2])\b", s)
+    if m and len(s) <= 4:
+        return f"{int(m.group(1)):02d}"
+
+    return ""
+
+
+def parse_birth_date(text: str) -> str:
+    """Date of birth — accept full or partial dates (year, month, year-month)."""
+    return parse_flexible_date(text) or ""
+
+
 def format_reaction_onset_field(cioms: dict[str, Any]) -> str:
-    """Field 4-6 — date only (YYYY-MM-DD), never AE labels or cover-letter text."""
-    for key in ("reaction_onset_date", "reaction_onset_display"):
-        parsed = parse_onset_date(str(cioms.get(key) or ""))
-        if parsed:
-            return parsed
+    """Field 4-6 — onset date(s); supports multi-reaction 'Term: date; ...' format."""
+    for key in ("reaction_onset_display", "reaction_onset_date"):
+        raw = str(cioms.get(key) or "").strip()
+        if raw and raw.upper() != UK:
+            if ";" in raw or (":" in raw and len(raw) > 12):
+                return raw
+            parsed = parse_flexible_date(raw)
+            if parsed:
+                return parsed
     for key in ("reaction_verbatim", "reaction_meddra_pt", "narrative"):
-        parsed = parse_onset_date(str(cioms.get(key) or ""))
+        parsed = parse_flexible_date(str(cioms.get(key) or ""))
         if parsed:
             return parsed
     return UK

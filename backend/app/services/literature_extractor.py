@@ -24,6 +24,8 @@ from app.services.pdf_text_utils import repair_pdf_text
 from app.services.field_sanitizer import (
     build_prose_narrative_from_cioms,
     is_structured_narrative,
+    parse_birth_date,
+    parse_flexible_date,
     parse_onset_date,
     prepare_narrative_for_display,
     sanitize_age,
@@ -103,9 +105,14 @@ def _first_match(patterns: list[str], text: str, flags: int = re.I | re.S) -> st
 
 _AE_LABELS = [
     "Adverse Event",
+    "Adverse event",
     "Adverse reaction",
     "Adverse Reaction",
+    "Adverse drug reaction",
+    "Adverse Drug Reaction",
+    "ADR",
     "AE",
+    "AR",
     "AE명",
     "AE name",
     "AE term",
@@ -113,9 +120,13 @@ _AE_LABELS = [
     "Event term",
     "Reaction term",
     "Verbatim term",
+    "Side effect",
+    "Side effects",
+    "Drug-related reaction",
     "이상반응",
     "부작용",
     "약물이상반응",
+    "약물 이상반응",
 ]
 
 _SAE_LABELS = [
@@ -207,16 +218,48 @@ _ONSET_DATE_LABELS = [
     "Date of onset",
     "AE onset date",
     "SAE onset date",
+    "ADR onset date",
     "Event onset date",
     "Adverse event onset",
     "Serious adverse event onset",
+    "Side effect onset",
     "Reaction onset",
     "Onset of reaction",
     "Date of event",
     "Onset",
     "발현일",
     "이상반응 발생일",
+    "부작용 발생일",
     "발생일",
+]
+
+# Abbreviation + full-term patterns for drug-related AE detection
+_KNOWN_AE_PATTERNS: list[tuple[str, str]] = [
+    (r"\badr\b", "Adverse drug reaction"),
+    (r"adverse\s+drug\s+reaction", "Adverse drug reaction"),
+    (r"\bae\b", "Adverse event"),
+    (r"adverse\s+event", "Adverse event"),
+    (r"adverse\s+reaction", "Adverse reaction"),
+    (r"side\s+effect", "Side effect"),
+    (r"drug[- ]?related\s+reaction", "Drug-related reaction"),
+    (r"ischemic\s+stroke", "Ischemic stroke"),
+    (r"ischaemic\s+stroke", "Ischaemic stroke"),
+    (r"pulmonary\s+embol", "Pulmonary embolism"),
+    (r"transient\s+enhancing\s+lesion", "Transient enhancing lesion"),
+    (r"\btec\b", "Transient enhancing lesion"),
+    (r"persistent\s+diplopia", "Persistent diplopia"),
+    (r"limited\s+eyeball\s+movement", "Limited eyeball movement"),
+    (r"diplopia", "Diplopia"),
+    (r"hepatotoxicity", "Hepatotoxicity"),
+    (r"anaphylaxis", "Anaphylactic reaction"),
+    (r"hypotension", "Hypotension"),
+    (r"urticaria", "Urticaria"),
+    (r"rash", "Rash"),
+    (r"nausea", "Nausea"),
+    (r"vomiting", "Vomiting"),
+    (r"이상반응", "Adverse reaction"),
+    (r"부작용", "Side effect"),
+    (r"약물이상반응", "Adverse drug reaction"),
 ]
 
 
@@ -656,6 +699,203 @@ def _drug_search_terms(drug: dict[str, str]) -> list[str]:
     return out
 
 
+def _context_links_drug_and_term(text: str, drug_terms: list[str], term: str) -> bool:
+    """True when suspect drug and reaction term appear in the same local context."""
+    if not term or is_citation_or_header_noise(term):
+        return False
+    if not drug_terms:
+        return True
+    term_esc = re.escape(term[: min(len(term), 40)])
+    drug_pat = re.compile(
+        "|".join(re.escape(t) for t in drug_terms if len(t) >= 3),
+        re.I,
+    )
+    for m in re.finditer(term_esc, text, re.I):
+        window = text[max(0, m.start() - 220) : min(len(text), m.end() + 220)]
+        if drug_pat.search(window):
+            return True
+    return False
+
+
+def _extract_onset_near_term(
+    text: str,
+    term: str,
+    tables: list[dict[str, Any]] | None = None,
+) -> str:
+    """Find flexible onset date near a specific reaction term."""
+    if tables:
+        term_low = term.lower()
+        for tbl in tables:
+            for row in tbl.get("rows", []):
+                if not isinstance(row, dict):
+                    continue
+                row_text = " ".join(str(v) for v in row.values())
+                if term_low not in row_text.lower():
+                    continue
+                for val in row.values():
+                    parsed = parse_flexible_date(str(val))
+                    if parsed:
+                        return parsed
+
+    term_esc = re.escape(term[: min(len(term), 40)])
+    for m in re.finditer(term_esc, text, re.I):
+        window = text[max(0, m.start() - 160) : min(len(text), m.end() + 160)]
+        for label in _ONSET_DATE_LABELS:
+            raw = _find_label_value(window, [label], max_len=60)
+            if raw:
+                parsed = parse_flexible_date(raw)
+                if parsed:
+                    return parsed
+        for pat in (
+            r"onset\s*(?:on|date)?\s*[:：]?\s*([^\n,;]{4,40})",
+            r"(\d{4}[-/.]\d{1,2}(?:[-/.]\d{1,2})?)",
+            r"(\d{1,2}[-/.]\d{1,2}[-/.]\d{4})",
+            r"((?:January|February|March|April|May|June|July|August|September|October|November|December)"
+            r"\s+\d{1,2},?\s+\d{4})",
+            r"\b(19|20)\d{2}\b",
+        ):
+            dm = re.search(pat, window, re.I)
+            if dm:
+                parsed = parse_flexible_date(dm.group(1) if dm.lastindex else dm.group(0))
+                if parsed:
+                    return parsed
+    return ""
+
+
+def _reaction_display_name(verbatim: str) -> str:
+    coding = code_adverse_event(verbatim)
+    return format_meddra(coding, verbatim) if coding else verbatim
+
+
+def _collect_drug_related_reactions(
+    text: str,
+    body: str,
+    drug: dict[str, str],
+    labeled_events: list[dict[str, Any]],
+    drug_ae_sentences: list[str],
+    tables: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    """All suspect-drug-related AEs/ADRs with per-reaction onset."""
+    drug_terms = _drug_search_terms(drug)
+    collected: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    def add_event(
+        verbatim: str,
+        kind: str = "AE",
+        serious: bool = False,
+        onset: str = "",
+        from_label: bool = False,
+    ) -> None:
+        v = _clean(verbatim)
+        if not v or is_citation_or_header_noise(v) or is_table_dump(v):
+            return
+        key = v.lower()
+        if key in seen:
+            return
+        if not from_label:
+            linked = _context_links_drug_and_term(body, drug_terms, v)
+            in_drug_sent = any(v.lower() in s.lower() for s in drug_ae_sentences)
+            if not linked and not in_drug_sent:
+                return
+        seen.add(key)
+        on = onset or _extract_onset_near_term(f"{text}\n{body}", v, tables)
+        if not on:
+            on = _extract_global_onset(text, body, tables)
+        display = _reaction_display_name(v)
+        coding = code_adverse_event(v)
+        collected.append(
+            {
+                "kind": kind,
+                "verbatim": v,
+                "display": display,
+                "short_name": (coding.pt if coding else v)[:60],
+                "serious": serious or kind == "SAE",
+                "onset": on or UK,
+            }
+        )
+
+    for ev in labeled_events:
+        if ev.get("kind") in ("AE", "SAE", "CASE", "MedDRA"):
+            add_event(
+                ev.get("verbatim", ""),
+                kind="SAE" if ev.get("serious") or ev.get("kind") == "SAE" else "AE",
+                serious=bool(ev.get("serious")),
+                from_label=True,
+            )
+
+    for _label, val in _find_all_label_values(text, _AE_LABELS, max_len=200):
+        add_event(val, kind="AE", from_label=True)
+
+    for _label, val in _find_all_label_values(text, _SAE_LABELS, max_len=200):
+        add_event(val, kind="SAE", serious=True, from_label=True)
+
+    search_scope = "\n".join(drug_ae_sentences) if drug_ae_sentences else body
+    for pat, label in _KNOWN_AE_PATTERNS:
+        if not re.search(pat, search_scope, re.I):
+            continue
+        if label.lower() in seen:
+            continue
+        if _context_links_drug_and_term(body, drug_terms, label) or drug_ae_sentences:
+            add_event(label)
+
+    return collected
+
+
+def _extract_global_onset(
+    text: str,
+    body: str,
+    tables: list[dict[str, Any]] | None = None,
+) -> str:
+    if tables:
+        table_date = extract_onset_date_from_tables(tables)
+        if table_date:
+            return parse_flexible_date(table_date) or table_date
+    for label in _ONSET_DATE_LABELS:
+        raw = _find_label_value(text, [label], max_len=80)
+        if raw and not is_table_dump(raw):
+            parsed = parse_flexible_date(raw)
+            if parsed:
+                return parsed
+    for pat in (
+        r"(?:onset|started|developed)\s+(?:on\s+)?"
+        r"((?:January|February|March|April|May|June|July|August|September|October|November|December)"
+        r"\s+\d{1,2},?\s+\d{4})",
+        r"(?:onset|started|developed)\s+(?:on\s+)?(\d{4}[-/.]\d{1,2}(?:[-/.]\d{1,2})?)",
+        r"(?:onset|started|developed)\s+(?:on\s+)?(\d{1,2}[-/.]\d{1,2}[-/.]\d{4})",
+    ):
+        m = re.search(pat, body, re.I)
+        if m:
+            parsed = parse_flexible_date(m.group(1))
+            if parsed:
+                return parsed
+    return ""
+
+
+def _format_multi_reaction_fields(
+    events: list[dict[str, Any]],
+    is_sae: bool = False,
+) -> tuple[str, str, str, str]:
+    """Build reaction_meddra_pt, reaction_verbatim, onset_date, onset_display."""
+    if not events:
+        return UK, UK, UK, UK
+
+    prefix = "[SAE] " if is_sae else ""
+    displays = [ev["display"] for ev in events]
+    pt = prefix + "; ".join(displays)
+    verbatim = prefix + "; ".join(ev["verbatim"] for ev in events)
+
+    if len(events) == 1:
+        onset = events[0].get("onset") or UK
+        onset_display = onset
+    else:
+        pairs = [f"{ev['short_name']}: {ev.get('onset') or UK}" for ev in events]
+        onset_display = "; ".join(pairs)
+        onset = onset_display
+
+    return _uk(pt), _uk(verbatim), onset, onset_display
+
+
 def _extract_case_title(text: str) -> str:
     """Paper/case title — not journal citation lines."""
     explicit = _first_match(
@@ -694,44 +934,9 @@ def _extract_reaction_onset_date(
     body: str,
     tables: list[dict[str, Any]] | None = None,
 ) -> str:
-    """Field 4-6: date only (YYYY-MM-DD) when AE/SAE occurred."""
-    if tables:
-        table_date = extract_onset_date_from_tables(tables)
-        if table_date:
-            return table_date
-
-    for label in _ONSET_DATE_LABELS:
-        raw = _find_label_value(text, [label], max_len=80)
-        if not raw or is_table_dump(raw):
-            continue
-        parsed = _parse_date(raw)
-        if parsed:
-            return parsed
-
-    contextual = [
-        r"(?:AE|SAE|adverse\s+event|serious\s+adverse\s+event|reaction)\s+onset\s*[:：]\s*"
-        r"([^\n]{4,40})",
-        r"onset\s+(?:date|on)\s*[:：]\s*([^\n]{4,40})",
-        r"(?:onset|started|developed)\s+(?:on\s+)?"
-        r"((?:January|February|March|April|May|June|July|August|September|October|November|December)"
-        r"\s+\d{1,2},?\s+\d{4})",
-        r"(?:onset|started|developed)\s+(?:on\s+)?(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})",
-        r"(?:onset|started|developed)\s+(?:on\s+)?(\d{1,2}[-/.]\d{1,2}[-/.]\d{4})",
-    ]
-    for pat in contextual:
-        m = re.search(pat, body, re.I)
-        if not m:
-            continue
-        parsed = _parse_date(m.group(1))
-        if parsed:
-            return parsed
-
-    for m in re.finditer(r"onset[^.\n]{0,30}", body, re.I):
-        parsed = _parse_date(m.group(0))
-        if parsed:
-            return parsed
-
-    return UK
+    """Field 4-6: flexible onset date when a single global date applies."""
+    onset = _extract_global_onset(text, body, tables)
+    return onset or UK
 
 
 def _extract_drug_related_ae_sentences(body: str, drug_terms: list[str]) -> list[str]:
@@ -739,11 +944,12 @@ def _extract_drug_related_ae_sentences(body: str, drug_terms: list[str]) -> list
         return []
     drug_pat = re.compile("|".join(re.escape(t) for t in drug_terms), re.I)
     ae_pat = re.compile(
-        r"adverse\s+(?:event|reaction|effect)|"
+        r"\badr\b|adverse\s+(?:event|reaction|effect|drug\s+reaction)|"
+        r"\bae\b|\bar\b|"
         r"(?:suspected|related|due|attributed)\s+(?:to|associated)|"
         r"complication|side\s+effect|toxicity|"
         r"diplopia|hypotension|rash|nausea|hepatotoxic|"
-        r"이상반응|부작용",
+        r"이상반응|부작용|약물이상반응",
         re.I,
     )
     sentences = re.findall(r"[^.!?\n]{25,450}[.!?]", body)
@@ -758,7 +964,7 @@ def _extract_drug_related_ae_sentences(body: str, drug_terms: list[str]) -> list
             continue
         if drug_pat.search(s) and ae_pat.search(s):
             hits.append(s)
-    return hits[:3]
+    return hits[:10]
 
 
 def _parse_date(text: str) -> str:
@@ -854,9 +1060,10 @@ def _extract_patient(text: str) -> dict[str, str]:
             "Patient initials",
             "Initials",
             "환자 이니셜",
-            "Patient ID",
-            "Case ID",
-            "Subject ID",
+            "Patient name",
+            "Name of patient",
+            "환자명",
+            "환자 이름",
         ],
     )
     if not initials:
@@ -864,16 +1071,11 @@ def _extract_patient(text: str) -> dict[str, str]:
             [
                 r"patient\s+initials?\s*[:：]\s*([A-Z]{1,3}(?:\s+[A-Z]{1,3})?)",
                 r"initials?\s*[:：]\s*([A-Z]{2,4})",
+                r"patient\s+name\s*[:：]\s*([A-Za-z][A-Za-z\s\-'.]{1,40})",
+                r"환자\s*명\s*[:：]\s*([^\n,]{1,40})",
             ],
             body,
         )
-    if not initials and (age or sex):
-        demo = []
-        if sex:
-            demo.append(sex)
-        if age:
-            demo.append(f"age {age}")
-        initials = ", ".join(demo)
 
     country = _find_label_value(
         text,
@@ -897,9 +1099,9 @@ def _extract_patient(text: str) -> dict[str, str]:
         [r"date\s+of\s+birth\s*[:：]\s*([^\n]+)", r"born\s+(?:on\s+)?([^\n,]+)"],
         body,
     )
-    dob = _parse_date(dob_raw) if dob_raw else ""
+    dob = parse_birth_date(dob_raw) if dob_raw else ""
     if not dob and dob_raw:
-        dob = UK
+        dob = _clean(dob_raw)[:40] or UK
 
     history = _extract_medical_history(body)
 
@@ -921,7 +1123,6 @@ def _extract_reaction(
     norm_text: str | None = None,
 ) -> dict[str, Any]:
     body = _case_report_body(norm_text or text)
-    search_text = f"{text}\n{norm_text or ''}"
 
     labeled_events = _dedupe_labeled_events(pre_labeled_events or _extract_labeled_events(text))
     labeled_ae = _find_label_value(text, _AE_LABELS)
@@ -930,75 +1131,35 @@ def _extract_reaction(
     labeled_sae = _find_label_value(text, _SAE_LABELS)
     if is_citation_or_header_noise(labeled_sae):
         labeled_sae = ""
-    if not labeled_ae and labeled_events:
-        for ev in labeled_events:
-            if ev["kind"] in ("AE", "SAE", "CASE", "MedDRA"):
-                labeled_ae = labeled_ae or ev["verbatim"]
-                break
 
     drug_terms = _drug_search_terms(drug)
     drug_ae_sentences = _extract_drug_related_ae_sentences(body, drug_terms)
 
-    ae_terms: list[str] = []
-    for ev in labeled_events:
-        if ev["verbatim"] not in ae_terms:
-            ae_terms.append(ev["verbatim"])
-    if labeled_ae and labeled_ae not in ae_terms:
-        ae_terms.insert(0, labeled_ae)
-    if labeled_sae and labeled_sae not in ae_terms:
-        ae_terms.insert(0, labeled_sae)
+    drug_events = _collect_drug_related_reactions(
+        text,
+        body,
+        drug,
+        labeled_events,
+        drug_ae_sentences,
+        tables=tables,
+    )
 
-    if not labeled_events and not labeled_ae:
-        for pat, label in [
-            (r"ischemic\s+stroke", "Ischemic stroke"),
-            (r"ischaemic\s+stroke", "Ischaemic stroke"),
-            (r"pulmonary\s+embol", "Pulmonary embolism"),
-            (r"transient\s+enhancing\s+lesion", "Transient enhancing lesion"),
-            (r"\btec\b", "Transient enhancing lesion"),
-            (r"persistent\s+diplopia", "Persistent diplopia"),
-            (r"limited\s+eyeball\s+movement", "Limited eyeball movement"),
-            (r"diplopia", "Diplopia"),
-            (r"hepatotoxicity", "Hepatotoxicity"),
-            (r"anaphylaxis", "Anaphylactic reaction"),
-            (r"hypotension", "Hypotension"),
-        ]:
-            if (re.search(pat, body, re.I) or re.search(pat, search_text, re.I)) and label not in ae_terms:
-                ae_terms.append(label)
+    is_sae_source = bool(labeled_sae) or any(
+        ev.get("serious") or ev.get("kind") == "SAE" for ev in drug_events
+    )
+    pt, verbatim, onset_date, onset_display = _format_multi_reaction_fields(
+        drug_events,
+        is_sae=is_sae_source,
+    )
 
-    title = _extract_case_title(text) or _extract_case_title(body)
-    if not title or "CASE REPORT" in title.upper() or is_citation_or_header_noise(title):
-        title = _first_match(
-            [r"(Limited[^\n]+|persistent[^\n]+|complication[^\n]{10,120}|"
-             r"ischemic[^\n]{5,80}|stroke[^\n]{5,80})"],
-            body,
-        )
-    if is_citation_or_header_noise(title):
-        title = ""
-
-    primary_coding = next((ev for ev in labeled_events if ev.get("meddra_pt")), None)
-    if not primary_coding and labeled_events:
-        first = labeled_events[0]
-        coding = code_adverse_event(first["verbatim"])
-        if coding:
-            primary_coding = {
-                **first,
-                "meddra_pt": coding.pt,
-                "meddra_code": coding.code,
-                "meddra_display": format_meddra(coding, first["verbatim"]),
-            }
-    if primary_coding:
-        pt = f"{primary_coding['meddra_pt']} ({primary_coding['meddra_code']})"
-        verbatim = primary_coding.get("meddra_display") or primary_coding["verbatim"]
-    elif ae_terms:
-        coding = code_adverse_event(ae_terms[0])
-        pt = format_meddra(coding, ae_terms[0]) if coding else ae_terms[0]
-        verbatim = pt
-    else:
-        coding = code_adverse_event(title) if title else None
-        pt = format_meddra(coding, title) if coding else (title or UK)
-        verbatim = pt
-
-    onset_date = _extract_reaction_onset_date(text, body, tables)
+    if pt == UK:
+        title = _extract_case_title(text) or _extract_case_title(body)
+        if title and not is_citation_or_header_noise(title):
+            coding = code_adverse_event(title)
+            display = format_meddra(coding, title) if coding else title
+            onset = _extract_global_onset(text, body, tables) or UK
+            pt = verbatim = display
+            onset_date = onset_display = onset
 
     outcome = _first_match(
         [
@@ -1020,15 +1181,18 @@ def _extract_reaction(
     )
 
     return {
-        "reaction_meddra_pt": _uk(pt),
-        "reaction_verbatim": _uk(verbatim),
+        "reaction_meddra_pt": pt,
+        "reaction_verbatim": verbatim,
         "reaction_onset_date": onset_date,
+        "reaction_onset_display": onset_display,
         "reaction_outcome": outcome,
-        "labeled_ae": labeled_ae or (labeled_events[0]["verbatim"] if labeled_events else ""),
+        "labeled_ae": labeled_ae or (drug_events[0]["verbatim"] if drug_events else ""),
         "labeled_sae": labeled_sae,
         "labeled_events": labeled_events,
+        "drug_related_events": drug_events,
         "drug_ae_sentences": drug_ae_sentences,
         "causality_sentence": causality,
+        "is_sae": is_sae_source,
     }
 
 
@@ -1537,10 +1701,11 @@ def extract_cioms_from_literature(
     )
     seriousness = _extract_seriousness(raw_text + "\n" + norm_text)
     if any_seriousness(seriousness):
-        for ev in reaction.get("labeled_events") or []:
-            if ev.get("kind") in ("AE", "CASE"):
-                ev["serious"] = True
-                ev["kind"] = "SAE"
+        reaction["is_sae"] = True
+        for key in ("reaction_meddra_pt", "reaction_verbatim"):
+            val = str(reaction.get(key) or "")
+            if val and val != UK and not val.startswith("[SAE]"):
+                reaction[key] = f"[SAE] {val}"
     dechallenge = _extract_dechallenge(raw_text)
     reporter = _extract_reporter(raw_text)
     report_meta = _extract_report_metadata(raw_text)
