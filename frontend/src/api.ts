@@ -43,7 +43,7 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
       if (e.message === "Failed to fetch" || e instanceof TypeError) {
         if (isDeployedApp()) {
           throw new Error(
-            "API 서버에 연결할 수 없습니다. Vercel에 API_PROXY_TARGET(Render URL)을 설정했는지, Render 백엔드가 실행 중인지 확인해 주세요.",
+            "API 서버에 연결할 수 없습니다. Render 백엔드(https://pv-qce5.onrender.com)가 실행 중인지 확인해 주세요. 무료 플랜은 첫 요청에 1~2분 걸릴 수 있습니다.",
           );
         }
         throw new Error(

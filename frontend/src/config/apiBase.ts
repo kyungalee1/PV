@@ -1,34 +1,45 @@
 /** Resolve API base URL for local dev, Vercel, and mobile browsers. */
 
+/** Production Render API — direct calls avoid Vercel proxy timeouts on PDF convert. */
+const PRODUCTION_RENDER_API = "https://pv-qce5.onrender.com/api";
+
+function normalizeApiBase(base: string): string {
+  const trimmed = base.trim().replace(/\/$/, "");
+  if (!trimmed) return trimmed;
+  if (trimmed.endsWith("/api")) return trimmed;
+  return `${trimmed}/api`;
+}
+
 export function resolveApiBase(): string {
-  const envBase = (import.meta.env.VITE_API_BASE as string | undefined)
-    ?.trim()
-    .replace(/\/$/, "");
+  const envBase = (import.meta.env.VITE_API_BASE as string | undefined)?.trim();
   const host =
     typeof window !== "undefined" ? window.location.hostname.toLowerCase() : "";
   const isLocalHost =
     host === "localhost" || host === "127.0.0.1" || host === "[::1]";
-
-  // Vercel hosts: always use same-origin /api proxy (vercel.json → Render)
-  if (host.endsWith(".vercel.app") || host.endsWith(".vercel.dev")) {
-    return "/api";
-  }
+  const isVercelHost =
+    host.endsWith(".vercel.app") || host.endsWith(".vercel.dev");
 
   const pointsToLocal =
     !!envBase &&
     (envBase.includes("127.0.0.1") || envBase.includes("localhost"));
 
-  // Production/public URL: never call 127.0.0.1 (breaks mobile & Vercel)
+  // Deployed app: call Render directly (Vercel /api proxy times out on long PDF parses)
+  if (isVercelHost || (import.meta.env.PROD && !isLocalHost)) {
+    if (envBase && !pointsToLocal) {
+      return normalizeApiBase(envBase);
+    }
+    return PRODUCTION_RENDER_API;
+  }
+
   if (envBase && !pointsToLocal) {
-    return envBase;
+    return normalizeApiBase(envBase);
   }
 
-  // Local dev on same machine
+  // Local dev on same machine — Vite proxies /api → localhost:8000
   if (envBase && pointsToLocal && isLocalHost) {
-    return envBase;
+    return normalizeApiBase(envBase);
   }
 
-  // Vercel serverless proxy at /api/* (see frontend/api/[...path].js)
   return "/api";
 }
 
@@ -44,6 +55,7 @@ export function isDeployedApp(): boolean {
 
 export function apiBaseLabel(): string {
   const base = resolveApiBase();
-  if (base === "/api") return "Vercel proxy → Render";
+  if (base === "/api") return "local proxy → backend";
+  if (base.includes("onrender.com")) return "Render API (direct)";
   return base;
 }

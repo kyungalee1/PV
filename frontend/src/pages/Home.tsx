@@ -22,6 +22,7 @@ const CIOMS_PREVIEW_HEIGHT = 960;
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
+  const [fileInputKey, setFileInputKey] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [serverOk, setServerOk] = useState<boolean | null>(null);
@@ -108,10 +109,16 @@ export default function Home() {
     setError("");
     try {
       const result = await api.convertLiterature(file);
+      if (!result?.html?.trim()) {
+        throw new Error(
+          "서버 응답에 HTML이 없습니다. Render 백엔드가 응답을 완료하지 못했을 수 있습니다. 잠시 후 다시 시도해 주세요.",
+        );
+      }
       setFilename(result.filename);
       setAeName(result.ae_name);
       setCioms({ ...emptyCioms(), ...result.cioms });
       setHtml(result.html);
+      setNeedsReconvert(false);
       setTab("preview");
     } catch (err) {
       setError(err instanceof Error ? err.message : "변환에 실패했습니다.");
@@ -136,6 +143,7 @@ export default function Home() {
 
   const reset = () => {
     setFile(null);
+    setFileInputKey((k) => k + 1);
     setCioms(null);
     setHtml("");
     setFilename("");
@@ -187,10 +195,8 @@ export default function Home() {
           <p className="mb-6 rounded-2xl bg-red-50 px-4 py-3 text-sm text-toss-red">
             {isDeployedApp() ? (
               <>
-                API 서버에 연결되지 않습니다. Vercel → Settings → Environment Variables에{" "}
-                <code className="text-xs">API_PROXY_TARGET</code> = Render 백엔드 URL
-                (예: https://xxx.onrender.com)을 넣고 <strong>Redeploy</strong>하세요.
-                Render 무료 플랜은 첫 요청에 1분 정도 걸릴 수 있습니다.
+                API 서버에 연결되지 않습니다. Render 백엔드가 슬립 상태일 수 있습니다.
+                1~2분 후 새로고침하거나, PDF 업로드 시 분석이 완료될 때까지 기다려 주세요.
               </>
             ) : (
               <>
@@ -230,6 +236,7 @@ export default function Home() {
                 }`}
               >
                 <input
+                  key={fileInputKey}
                   type="file"
                   accept=".pdf,application/pdf"
                   className="hidden"
@@ -253,6 +260,11 @@ export default function Home() {
                 {loading ? <Loader2 className="animate-spin" size={18} /> : null}
                 {loading ? "분석 중…" : "CIOMS HTML 생성"}
               </button>
+              {loading && isDeployedApp() && (
+                <p className="mt-3 text-center text-xs text-toss-gray-500">
+                  Render 무료 플랜은 첫 요청에 1~2분 걸릴 수 있습니다. 창을 닫지 마세요.
+                </p>
+              )}
             </form>
           </section>
         ) : (

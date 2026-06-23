@@ -44,7 +44,7 @@ def _generate_cioms_pdf(cioms: dict, case_id: int, out: Path) -> None:
 
     generate_cioms_pdf(cioms, case_id, out)
 
-EXTRACTOR_VERSION = "2025-06-drug14-v2"
+EXTRACTOR_VERSION = "2025-06-extract-v3"
 
 app = FastAPI(title="CIOMS Literature Converter", version="2.0.0")
 
